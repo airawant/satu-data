@@ -19,6 +19,12 @@ const nextConfig = {
   transpilePackages: ['recharts', 'recharts-scale', 'd3-scale', 'd3-shape', 'd3-path', 'd3-interpolate'],
   // Konfigurasi output yang lebih stabil untuk Vercel
   output: 'standalone',
+  // Konfigurasi untuk meningkatkan stabilitas halaman
+  modularizeImports: {
+    'lucide-react': {
+      transform: 'lucide-react/dist/esm/icons/{{ kebabCase member }}',
+    },
+  },
   webpack: (config, { isServer }) => {
     // Meningkatkan batas ukuran untuk chunk utama
     if (!isServer) {
@@ -60,6 +66,15 @@ const nextConfig = {
             name: 'charts',
             chunks: 'all',
             test: /[\\/]components[\\/]charts[\\/]/,
+            priority: 15,
+            enforce: true,
+            reuseExistingChunk: true,
+          },
+          // Chunk terpisah untuk auth
+          auth: {
+            name: 'auth',
+            chunks: 'all',
+            test: /[\\/]components[\\/]auth[\\/]/,
             priority: 15,
             enforce: true,
             reuseExistingChunk: true,

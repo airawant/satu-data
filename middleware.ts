@@ -82,8 +82,8 @@ export async function middleware(req: NextRequest) {
     }
 
     // Tangani rute khusus dengan lebih baik
-    if (req.nextUrl.pathname === '/charts') {
-      // Pastikan bahwa rute /charts selalu dirender dengan stabil, menghindari error prerender
+    if (req.nextUrl.pathname === '/charts' || req.nextUrl.pathname === '/login') {
+      // Pastikan bahwa rute bermasalah selalu dirender dengan stabil, menghindari error prerender
       return NextResponse.next();
     }
 
