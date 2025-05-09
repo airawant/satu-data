@@ -87,6 +87,15 @@ const nextConfig = {
             priority: 15,
             enforce: true,
             reuseExistingChunk: true,
+          },
+          // Chunk terpisah untuk admin
+          admin: {
+            name: 'admin',
+            chunks: 'all',
+            test: /[\\/]components[\\/]admin[\\/]/,
+            priority: 15,
+            enforce: true,
+            reuseExistingChunk: true,
           }
         },
       };
