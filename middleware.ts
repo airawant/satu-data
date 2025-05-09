@@ -85,7 +85,10 @@ export async function middleware(req: NextRequest) {
     if (req.nextUrl.pathname === '/charts' ||
         req.nextUrl.pathname === '/login' ||
         req.nextUrl.pathname === '/query-builder' ||
-        req.nextUrl.pathname === '/admin/dynamic-table-config') {
+        req.nextUrl.pathname === '/admin/dynamic-table-config' ||
+        req.nextUrl.pathname === '/admin' ||
+        req.nextUrl.pathname === '/admin/upload-dataset' ||
+        req.nextUrl.pathname === '/admin/upload-infografis') {
       // Pastikan bahwa rute bermasalah selalu dirender dengan stabil, menghindari error prerender
       return NextResponse.next();
     }
