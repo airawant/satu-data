@@ -31,7 +31,7 @@ export default function Home() {
                 <img
                   alt="Dashboard Portal Satu Data"
                   className="aspect-video overflow-hidden rounded-xl object-cover object-center sm:w-full lg:order-last"
-                  src="/placeholder.svg?height=400&width=800"
+                  src="/kantor.jpg?height=400&width=800"
                 />
               </div>
             </div>
