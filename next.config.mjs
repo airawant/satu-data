@@ -78,6 +78,15 @@ const nextConfig = {
             priority: 15,
             enforce: true,
             reuseExistingChunk: true,
+          },
+          // Chunk terpisah untuk query-builder
+          queryBuilder: {
+            name: 'query-builder',
+            chunks: 'all',
+            test: /[\\/]components[\\/]query-builder[\\/]/,
+            priority: 15,
+            enforce: true,
+            reuseExistingChunk: true,
           }
         },
       };

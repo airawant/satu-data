@@ -82,7 +82,9 @@ export async function middleware(req: NextRequest) {
     }
 
     // Tangani rute khusus dengan lebih baik
-    if (req.nextUrl.pathname === '/charts' || req.nextUrl.pathname === '/login') {
+    if (req.nextUrl.pathname === '/charts' ||
+        req.nextUrl.pathname === '/login' ||
+        req.nextUrl.pathname === '/query-builder') {
       // Pastikan bahwa rute bermasalah selalu dirender dengan stabil, menghindari error prerender
       return NextResponse.next();
     }
@@ -97,5 +99,12 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   // Daftar rute yang harus melalui middleware untuk pengecekan otentikasi
-  matcher: ['/admin/:path*', '/login', '/data-explorer', '/dashboard', '/charts/:path*'],
+  matcher: [
+    '/admin/:path*',
+    '/login',
+    '/data-explorer',
+    '/dashboard',
+    '/charts/:path*',
+    '/query-builder'
+  ],
 }
