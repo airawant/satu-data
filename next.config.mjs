@@ -11,9 +11,12 @@ const nextConfig = {
   },
   // Meningkatkan stabilitas build dengan menunda loading untuk halaman charts
   experimental: {
-    serverComponentsExternalPackages: ['recharts'],
+    // Hindari konflik dengan transpilePackages
+    // serverComponentsExternalPackages: ['recharts'],
     missingSuspenseWithCSRBailout: false,
   },
+  // Menjamin recharts ditranspilasi dengan benar
+  transpilePackages: ['recharts', 'recharts-scale', 'd3-scale', 'd3-shape', 'd3-path', 'd3-interpolate'],
   // Konfigurasi output yang lebih stabil untuk Vercel
   output: 'standalone',
   webpack: (config, { isServer }) => {

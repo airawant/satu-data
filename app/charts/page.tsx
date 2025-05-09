@@ -2,7 +2,12 @@ import { Header } from "@/components/header"
 import { ChartBuilder } from "@/components/charts/chart-builder"
 import { Suspense } from "react"
 
+// Gunakan force-dynamic untuk menghindari prerender error
 export const dynamic = "force-dynamic";
+// Nonaktifkan prerendering untuk halaman ini
+export const generateStaticParams = () => [];
+// Tunda rendering hingga runtime
+export const fetchCache = 'force-no-store';
 
 export default function ChartsPage() {
   return (
