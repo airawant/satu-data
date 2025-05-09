@@ -1,0 +1,1340 @@
+"use client"
+
+import { useState, useMemo, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Badge } from "@/components/ui/badge"
+import { ChartDisplay } from "@/components/charts/chart-display"
+import {
+  BarChart3,
+  ChevronDown,
+  FileSpreadsheet,
+  FileText,
+  ImageIcon,
+  LineChart,
+  PieChart,
+  ScatterChartIcon as ScatterPlot,
+  AreaChart,
+  BarChartHorizontal,
+  Lightbulb,
+  Info,
+  Layers,
+  ArrowRight,
+} from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useToast } from "@/components/ui/use-toast"
+import { Separator } from "@/components/ui/separator"
+import { useDatasets } from "@/contexts/dataset-context"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+
+// Definisi jenis grafik yang didukung
+const chartTypes = [
+  {
+    id: "bar",
+    name: "Grafik Batang",
+    icon: BarChart3,
+    description: "Membandingkan nilai antar kategori",
+    minDimensions: 1,
+    maxDimensions: 2,
+    minMeasures: 1,
+    maxMeasures: 5,
+    supportsGrouping: false,
+    supportsLabels: false,
+    recommendedFor: "Perbandingan nilai antar kategori dengan jumlah kategori yang tidak terlalu banyak (< 20)",
+  },
+  {
+    id: "grouped-bar",
+    name: "Grafik Batang Kelompok",
+    icon: BarChart3,
+    description: "Membandingkan nilai antar kategori dan kelompok",
+    minDimensions: 1,
+    maxDimensions: 2,
+    minMeasures: 1,
+    maxMeasures: 5,
+    supportsGrouping: true,
+    supportsLabels: true,
+    recommendedFor: "Perbandingan nilai antar kategori dan kelompok",
+  },
+  {
+    id: "line",
+    name: "Grafik Garis",
+    icon: LineChart,
+    description: "Menampilkan tren dari waktu ke waktu atau data kontinu",
+    minDimensions: 1,
+    maxDimensions: 2,
+    minMeasures: 1,
+    maxMeasures: 5,
+    supportsGrouping: false,
+    supportsLabels: false,
+    recommendedFor: "Data deret waktu atau tren yang berubah secara kontinu",
+  },
+  {
+    id: "pie",
+    name: "Grafik Lingkaran",
+    icon: PieChart,
+    description: "Menampilkan proporsi dari keseluruhan",
+    minDimensions: 1,
+    maxDimensions: 1,
+    minMeasures: 1,
+    maxMeasures: 1,
+    supportsGrouping: false,
+    supportsLabels: false,
+    recommendedFor: "Proporsi dari keseluruhan dengan jumlah kategori sedikit (< 7)",
+  },
+  {
+    id: "stacked-bar",
+    name: "Grafik Batang Bertumpuk",
+    icon: Layers,
+    description: "Membandingkan bagian dari keseluruhan antar kategori",
+    minDimensions: 1,
+    maxDimensions: 1,
+    minMeasures: 1,
+    maxMeasures: 5,
+    supportsGrouping: true,
+    supportsLabels: true,
+    recommendedFor: "Perbandingan komposisi antar kategori",
+  },
+  {
+    id: "multi-axis-bar",
+    name: "Grafik Batang Multi-Axis",
+    icon: BarChart3,
+    description: "Membandingkan nilai dengan skala berbeda",
+    minDimensions: 1,
+    maxDimensions: 1,
+    minMeasures: 2,
+    maxMeasures: 2,
+    supportsGrouping: true,
+    supportsLabels: true,
+    recommendedFor: "Perbandingan nilai dengan skala yang berbeda",
+  },
+  {
+    id: "area",
+    name: "Grafik Area",
+    icon: AreaChart,
+    description: "Menampilkan total kumulatif dari waktu ke waktu",
+    minDimensions: 1,
+    maxDimensions: 2,
+    minMeasures: 1,
+    maxMeasures: 5,
+    supportsGrouping: false,
+    supportsLabels: false,
+    recommendedFor: "Data deret waktu dengan penekanan pada volume total",
+  },
+  {
+    id: "scatter",
+    name: "Diagram Pencar",
+    icon: ScatterPlot,
+    description: "Menampilkan korelasi antara dua variabel",
+    minDimensions: 0,
+    maxDimensions: 1,
+    minMeasures: 2,
+    maxMeasures: 3,
+    supportsGrouping: false,
+    supportsLabels: false,
+    recommendedFor: "Analisis korelasi antara dua variabel numerik",
+  },
+  {
+    id: "horizontal-bar",
+    name: "Grafik Batang Horizontal",
+    icon: BarChartHorizontal,
+    description: "Membandingkan nilai antar kategori dengan label panjang",
+    minDimensions: 1,
+    maxDimensions: 2,
+    minMeasures: 1,
+    maxMeasures: 5,
+    supportsGrouping: false,
+    supportsLabels: false,
+    recommendedFor: "Perbandingan nilai dengan label kategori yang panjang",
+  },
+]
+
+export function ChartBuilder() {
+  const searchParams = useSearchParams()
+  const { datasets, loading } = useDatasets()
+  const [selectedDatasetId, setSelectedDatasetId] = useState<string>("")
+  const [selectedXAxisVariables, setSelectedXAxisVariables] = useState<string[]>([])
+  const [selectedYAxisVariables, setSelectedYAxisVariables] = useState<string[]>([])
+  const [selectedGroupVariable, setSelectedGroupVariable] = useState<string | null>(null)
+  const [selectedLabelVariable, setSelectedLabelVariable] = useState<string | null>(null)
+  const [chartData, setChartData] = useState<any>({ data: [], xAxisName: "", yAxisNames: [], groupName: "" })
+  const [showChart, setShowChart] = useState(false)
+  const [activeTab, setActiveTab] = useState("variables")
+  const [selectedChartType, setSelectedChartType] = useState<string>("")
+  const [currentStep, setCurrentStep] = useState<"variables" | "chartType">("variables")
+
+  const { toast } = useToast()
+
+  // Check if there's a dataset ID in the URL
+  useEffect(() => {
+    const datasetId = searchParams.get("dataset")
+    if (datasetId && !loading) {
+      setSelectedDatasetId(datasetId)
+    }
+  }, [searchParams, loading])
+
+  // Get the selected dataset
+  const selectedDataset = useMemo(() => {
+    return datasets.find((d) => d.id === selectedDatasetId)
+  }, [datasets, selectedDatasetId])
+
+  // Get available dimensions and measures from the selected dataset
+  const dimensions = useMemo(() => {
+    return selectedDataset?.variables.filter((v) => v.type === "dimension" && v.selected) || []
+  }, [selectedDataset])
+
+  const measures = useMemo(() => {
+    return selectedDataset?.variables.filter((v) => v.type === "measure" && v.selected) || []
+  }, [selectedDataset])
+
+  // Get the selected chart type definition
+  const selectedChartTypeDefinition = useMemo(() => {
+    return chartTypes.find((c) => c.id === selectedChartType)
+  }, [selectedChartType])
+
+  // Filter available dimensions for group variable (exclude X and Y variables)
+  const availableGroupDimensions = useMemo(() => {
+    return dimensions.filter(
+      (dim) => !selectedXAxisVariables.includes(dim.id) && !selectedYAxisVariables.includes(dim.id),
+    )
+  }, [dimensions, selectedXAxisVariables, selectedYAxisVariables])
+
+  // Filter available measures for label variable (exclude X and Y variables)
+  const availableLabelMeasures = useMemo(() => {
+    return measures.filter(
+      (measure) => !selectedXAxisVariables.includes(measure.id) && !selectedYAxisVariables.includes(measure.id),
+    )
+  }, [measures, selectedXAxisVariables, selectedYAxisVariables])
+
+  // Determine recommended chart types based on selected variables
+  const recommendedChartTypes = useMemo(() => {
+    if (!selectedXAxisVariables.length) {
+      return []
+    }
+
+    const numDimensions = selectedXAxisVariables.length
+    const numMeasures = selectedYAxisVariables.length > 0 ? selectedYAxisVariables.length : 1 // Count as 1 measure if no Y selected
+
+    // If group or label variable is selected, only show supported chart types
+    if (selectedGroupVariable || selectedLabelVariable) {
+      return chartTypes.filter(
+        (chartType) =>
+          chartType.supportsGrouping &&
+          chartType.supportsLabels &&
+          numDimensions >= chartType.minDimensions &&
+          numDimensions <= chartType.maxDimensions &&
+          numMeasures >= chartType.minMeasures &&
+          numMeasures <= chartType.maxMeasures,
+      )
+    }
+
+    return chartTypes.filter(
+      (chartType) =>
+        numDimensions >= chartType.minDimensions &&
+        numDimensions <= chartType.maxDimensions &&
+        numMeasures >= chartType.minMeasures &&
+        numMeasures <= chartType.maxMeasures,
+    )
+  }, [selectedXAxisVariables, selectedYAxisVariables, selectedGroupVariable, selectedLabelVariable])
+
+  // Check if variables are selected to proceed to chart type selection
+  const canProceedToChartType = useMemo(() => {
+    return selectedXAxisVariables.length > 0
+  }, [selectedXAxisVariables])
+
+  // Handle dataset selection
+  const handleSelectDataset = (datasetId: string) => {
+    setSelectedDatasetId(datasetId)
+    setSelectedXAxisVariables([])
+    setSelectedYAxisVariables([])
+    setSelectedGroupVariable(null)
+    setSelectedLabelVariable(null)
+    setSelectedChartType("")
+    setShowChart(false)
+    setCurrentStep("variables")
+  }
+
+  // Handle X-axis variable selection
+  const handleXAxisVariableToggle = (variableId: string) => {
+    if (selectedXAxisVariables.includes(variableId)) {
+      setSelectedXAxisVariables(selectedXAxisVariables.filter((id) => id !== variableId))
+    } else {
+      // Limit to 2 dimensions for X-axis
+      if (selectedXAxisVariables.length < 2) {
+        setSelectedXAxisVariables([...selectedXAxisVariables, variableId])
+
+        // If this variable was selected as group or label, deselect it
+        if (selectedGroupVariable === variableId) {
+          setSelectedGroupVariable(null)
+        }
+        if (selectedLabelVariable === variableId) {
+          setSelectedLabelVariable(null)
+        }
+      } else {
+        toast({
+          title: "Peringatan",
+          description: "Maksimal 2 variabel dapat dipilih untuk sumbu X",
+          variant: "destructive",
+        })
+      }
+    }
+  }
+
+  // Handle Y-axis variable selection
+  const handleYAxisVariableToggle = (variableId: string) => {
+    if (selectedYAxisVariables.includes(variableId)) {
+      setSelectedYAxisVariables(selectedYAxisVariables.filter((id) => id !== variableId))
+    } else {
+      // Limit to 5 measures for Y-axis
+      if (selectedYAxisVariables.length < 5) {
+        setSelectedYAxisVariables([...selectedYAxisVariables, variableId])
+
+        // If this variable was selected as group or label, deselect it
+        if (selectedGroupVariable === variableId) {
+          setSelectedGroupVariable(null)
+        }
+        if (selectedLabelVariable === variableId) {
+          setSelectedLabelVariable(null)
+        }
+      } else {
+        toast({
+          title: "Peringatan",
+          description: "Maksimal 5 variabel dapat dipilih untuk sumbu Y",
+          variant: "destructive",
+        })
+      }
+    }
+  }
+
+  // Handle group variable selection
+  const handleGroupVariableChange = (variableId: string | null) => {
+    setSelectedGroupVariable(variableId)
+  }
+
+  // Handle label variable selection
+  const handleLabelVariableChange = (variableId: string | null) => {
+    setSelectedLabelVariable(variableId)
+  }
+
+  // Handle chart type selection
+  const handleChartTypeSelect = (chartType: string) => {
+    setSelectedChartType(chartType)
+
+    // Auto-generate chart when chart type is selected
+    setTimeout(() => {
+      handleGenerateChart()
+    }, 100)
+  }
+
+  // Handle proceeding to chart type selection
+  const handleProceedToChartType = () => {
+    if (canProceedToChartType) {
+      setCurrentStep("chartType")
+
+      // If there's only one recommended chart type, select it automatically
+      if (recommendedChartTypes.length === 1) {
+        setSelectedChartType(recommendedChartTypes[0].id)
+      } else if (recommendedChartTypes.length > 0 && !selectedChartType) {
+        // Select the first recommended chart type if none is selected
+        setSelectedChartType(recommendedChartTypes[0].id)
+      }
+    } else {
+      toast({
+        title: "Peringatan",
+        description: "Silakan pilih minimal satu variabel untuk sumbu X",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Handle going back to variable selection
+  const handleBackToVariables = () => {
+    setCurrentStep("variables")
+  }
+
+  // Generate chart data from the actual dataset
+  const generateChartData = () => {
+    if (!selectedDataset || !selectedXAxisVariables.length || !selectedChartType) {
+      return null
+    }
+
+    // Get variable names from IDs
+    const xAxisVariables = selectedXAxisVariables
+      .map((id) => dimensions.find((d) => d.id === id)?.name || "")
+      .filter((name) => name !== "")
+
+    const yAxisVariables = selectedYAxisVariables
+      .map((id) => measures.find((m) => m.id === id)?.name || "")
+      .filter((name) => name !== "")
+
+    // Get group variable name if selected
+    const groupVariableName = selectedGroupVariable
+      ? dimensions.find((d) => d.id === selectedGroupVariable)?.name
+      : null
+
+    // Get label variable name if selected
+    const labelVariableName = selectedLabelVariable ? measures.find((m) => m.id === selectedLabelVariable)?.name : null
+
+    if (!xAxisVariables.length) {
+      return null
+    }
+
+    // Primary X-axis variable
+    const primaryXAxis = xAxisVariables[0]
+
+    // Secondary X-axis variable (if exists)
+    const secondaryXAxis = xAxisVariables.length > 1 ? xAxisVariables[1] : null
+
+    // Normalize dataset - handle both 'data' (old) and 'content' (new) property names
+    const dataArray = selectedDataset.content || (selectedDataset as any).data || [];
+
+    // Filter out header rows or metadata - ensure we only count actual data rows
+    const actualData = dataArray.filter((row) => {
+      // Implement your logic to identify actual data rows
+      // For example, check if required fields have values
+      return row && row[primaryXAxis] !== undefined && row[primaryXAxis] !== null && row[primaryXAxis] !== ""
+    })
+
+    // Group data by X-axis variables and optionally by group variable
+    const groupedData: Record<string, any>[] = []
+
+    // Get unique values for primary X-axis
+    const uniqueXValues = new Set<string>()
+    actualData.forEach((row) => {
+      if (row[primaryXAxis] !== undefined) {
+        uniqueXValues.add(row[primaryXAxis].toString())
+      }
+    })
+
+    // Get unique values for group variable if selected
+    const uniqueGroupValues = new Set<string>()
+    if (groupVariableName) {
+      actualData.forEach((row) => {
+        if (row[groupVariableName] !== undefined && row[groupVariableName] !== null) {
+          uniqueGroupValues.add(row[groupVariableName].toString())
+        }
+      })
+    }
+    const groupValues = Array.from(uniqueGroupValues)
+
+    // For each unique X value
+    Array.from(uniqueXValues)
+      .sort()
+      .forEach((xValue) => {
+        // Filter data for this X value
+        const filteredByX = actualData.filter((row) => row[primaryXAxis]?.toString() === xValue)
+
+        if (!filteredByX || filteredByX.length === 0) {
+          // Skip if no data matches this X value
+          return
+        }
+
+        // If we have a secondary X-axis, group by that too
+        if (secondaryXAxis) {
+          // Get unique secondary X values
+          const uniqueSecondaryValues = new Set<string>()
+          filteredByX.forEach((row) => {
+            if (row && row[secondaryXAxis] !== undefined) {
+              uniqueSecondaryValues.add(row[secondaryXAxis].toString())
+            }
+          })
+
+          // For each unique secondary X value
+          Array.from(uniqueSecondaryValues)
+            .sort()
+            .forEach((secondaryValue) => {
+              // Filter data for this secondary X value
+              // Pastikan filteredByX tidak undefined sebelum melakukan filter
+              const filteredBySecondaryX = filteredByX?.filter(
+                (row) => row && row[secondaryXAxis] !== undefined &&
+                row[secondaryXAxis]?.toString() === secondaryValue,
+              ) || []
+
+              if (!filteredBySecondaryX || filteredBySecondaryX.length === 0) {
+                // Skip if no data matches this secondary X value
+                return
+              }
+
+              if (groupVariableName && selectedChartTypeDefinition?.supportsGrouping) {
+                // If we have a group variable, create a data point for each group
+                const dataPoint: Record<string, any> = {
+                  xValue,
+                  xValueSecondary: secondaryValue,
+                  xValueCombined: `${xValue} - ${secondaryValue}`,
+                }
+
+                // For each group value
+                groupValues.forEach((groupValue) => {
+                  // Filter data for this group - pastikan filteredBySecondaryX tidak undefined
+                  const filteredByGroup = filteredBySecondaryX?.filter(
+                    (row) => row && row[groupVariableName] !== undefined &&
+                    row[groupVariableName]?.toString() === groupValue
+                  ) || []
+
+                  if (!filteredByGroup || filteredByGroup.length === 0) {
+                    // Skip empty group or set to 0
+                    dataPoint[`count_${groupValue}`] = 0;
+                    return;
+                  }
+
+                  // If no Y variables selected, use count as Y value
+                  if (yAxisVariables.length === 0) {
+                    dataPoint[`count_${groupValue}`] = filteredByGroup?.length || 0
+                  } else {
+                    // Add Y values for each group
+                    yAxisVariables.forEach((yVar) => {
+                      // Calculate sum for this group
+                      const sum = filteredByGroup?.reduce((acc, row) => {
+                        const value = Number(row && row[yVar] !== undefined ? row[yVar] : 0)
+                        return acc + value
+                      }, 0) || 0
+
+                      dataPoint[`${yVar}_${groupValue}`] = sum
+                    })
+                  }
+                })
+
+                groupedData.push(dataPoint)
+              } else {
+                // No group variable, simpler grouping
+                const dataPoint: Record<string, any> = {
+                  xValue,
+                  xValueSecondary: secondaryValue,
+                  xValueCombined: `${xValue} - ${secondaryValue}`,
+                }
+
+                // If no Y variables selected, use count as Y value
+                if (yAxisVariables.length === 0) {
+                  dataPoint["count"] = filteredBySecondaryX?.length || 0
+                } else {
+                  // Add Y values
+                  yAxisVariables.forEach((yVar) => {
+                    // Calculate sum for this group
+                    const sum = filteredBySecondaryX?.reduce((acc, row) => {
+                      const value = Number(row && row[yVar] !== undefined ? row[yVar] : 0)
+                      return acc + value
+                    }, 0) || 0
+
+                    dataPoint[yVar] = sum
+                  })
+                }
+
+                groupedData.push(dataPoint)
+              }
+            })
+        } else {
+          // No secondary X-axis
+          if (groupVariableName && selectedChartTypeDefinition?.supportsGrouping) {
+            // If we have a group variable, create a data point for each X value
+            const dataPoint: Record<string, any> = {
+              xValue,
+            }
+
+            // For each group value
+            groupValues.forEach((groupValue) => {
+              // Filter data for this group - pastikan filteredByX tidak undefined
+              const filteredByGroup = filteredByX?.filter(
+                (row) => row && row[groupVariableName] !== undefined &&
+                row[groupVariableName]?.toString() === groupValue
+              ) || []
+
+              if (!filteredByGroup || filteredByGroup.length === 0) {
+                // Skip empty group or set to 0
+                dataPoint[`count_${groupValue}`] = 0;
+                return;
+              }
+
+              // If no Y variables selected, use count as Y value
+              if (yAxisVariables.length === 0) {
+                dataPoint[`count_${groupValue}`] = filteredByGroup.length
+              } else {
+                // Add Y values for each group
+                yAxisVariables.forEach((yVar) => {
+                  // Calculate sum for this group
+                  const sum = filteredByGroup.reduce((acc, row) => {
+                    const value = Number(row && row[yVar] !== undefined ? row[yVar] : 0)
+                    return acc + value
+                  }, 0)
+
+                  dataPoint[`${yVar}_${groupValue}`] = sum
+                })
+              }
+            })
+
+            groupedData.push(dataPoint)
+          } else {
+            // No group variable, simpler grouping
+            const dataPoint: Record<string, any> = {
+              xValue,
+            }
+
+            // If no Y variables selected, use count as Y value
+            if (yAxisVariables.length === 0) {
+              dataPoint["count"] = filteredByX?.length || 0
+            } else {
+              // Add Y values
+              yAxisVariables.forEach((yVar) => {
+                // Calculate sum for this group
+                const sum = filteredByX?.reduce((acc, row) => {
+                  const value = Number(row && row[yVar] !== undefined ? row[yVar] : 0)
+                  return acc + value
+                }, 0) || 0
+
+                dataPoint[yVar] = sum
+              })
+            }
+
+            groupedData.push(dataPoint)
+          }
+        }
+      })
+
+    // Prepare Y-axis names based on grouping
+    let yAxisNames: string[] = []
+
+    if (groupVariableName && selectedChartTypeDefinition?.supportsGrouping) {
+      // If we have a group variable, create Y-axis names for each group
+      if (yAxisVariables.length === 0) {
+        // Using count as Y value
+        yAxisNames = groupValues.map((groupValue) => `count_${groupValue}`)
+      } else {
+        // Using selected Y variables
+        yAxisVariables.forEach((yVar) => {
+          groupValues.forEach((groupValue) => {
+            yAxisNames.push(`${yVar}_${groupValue}`)
+          })
+        })
+      }
+    } else {
+      // No group variable
+      yAxisNames = yAxisVariables.length > 0 ? yAxisVariables : ["count"]
+    }
+
+    return {
+      data: groupedData,
+      xAxisName: secondaryXAxis ? "xValueCombined" : "xValue",
+      yAxisNames: yAxisNames,
+      groupName: groupVariableName || "",
+      groupValues: groupValues,
+      labelName: labelVariableName || "",
+    }
+  }
+
+  // Handle generate chart
+  const handleGenerateChart = () => {
+    if (!selectedDataset) {
+      toast({
+        title: "Error",
+        description: "Silakan pilih dataset terlebih dahulu",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!selectedXAxisVariables.length) {
+      toast({
+        title: "Error",
+        description: "Silakan pilih minimal satu variabel untuk sumbu X",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!selectedChartType) {
+      toast({
+        title: "Error",
+        description: "Silakan pilih jenis grafik",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Generate chart data
+    const data = generateChartData()
+    if (data) {
+      setChartData(data)
+      setShowChart(true)
+      setActiveTab("chart")
+
+      toast({
+        title: "Berhasil",
+        description: "Grafik berhasil dibuat",
+      })
+    }
+  }
+
+  // Handle download
+  const handleDownload = (format: string) => {
+    toast({
+      title: "Unduh Dimulai",
+      description: `Mengunduh grafik sebagai ${format.toUpperCase()}`,
+    })
+  }
+
+  // Get variable names for display
+  const getVariableName = (id: string) => {
+    const dimension = dimensions.find((d) => d.id === id)
+    if (dimension) return dimension.name
+
+    const measure = measures.find((m) => m.id === id)
+    if (measure) return measure.name
+
+    return id
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Memuat dataset...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-gray-50 min-h-screen">
+      <div className="container mx-auto py-6 px-4">
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Sidebar - chart options */}
+          <div className="w-full lg:w-1/3">
+            <div className="sticky top-20">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Pembuat Grafik</CardTitle>
+                  <CardDescription>Pilih dataset, variabel, dan jenis grafik untuk visualisasi data</CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                  {/* Dataset Selection */}
+                  <div className="mb-6">
+                    <Label htmlFor="dataset-select" className="block text-sm font-medium mb-2">
+                      Dataset
+                    </Label>
+                    <Select value={selectedDatasetId} onValueChange={handleSelectDataset}>
+                      <SelectTrigger id="dataset-select" className="w-full">
+                        <SelectValue placeholder="Pilih dataset" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {datasets.map((dataset) => (
+                          <SelectItem key={dataset.id} value={dataset.id}>
+                            {dataset.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedDataset && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Kategori: {selectedDataset.category.charAt(0).toUpperCase() + selectedDataset.category.slice(1)}
+                      </p>
+                    )}
+                  </div>
+
+                  {selectedDataset && (
+                    <div className="space-y-6">
+                      <Separator />
+
+                      {/* Step 1: Variable Selection */}
+                      {currentStep === "variables" && (
+                        <>
+                          {/* X-Axis Variable Selection */}
+                          <div>
+                            <div className="flex justify-between items-center mb-2">
+                              <Label className="text-sm font-medium">Variabel Sumbu X (Dimensi)</Label>
+                              <Badge variant="outline" className="text-xs">
+                                {selectedXAxisVariables.length}/2 dipilih
+                              </Badge>
+                            </div>
+                            <div className="border rounded-md p-3 max-h-[150px] overflow-y-auto space-y-2">
+                              {dimensions.length === 0 ? (
+                                <p className="text-sm text-muted-foreground text-center">Tidak ada dimensi tersedia</p>
+                              ) : (
+                                dimensions.map((dimension) => (
+                                  <div key={dimension.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`x-${dimension.id}`}
+                                      checked={selectedXAxisVariables.includes(dimension.id)}
+                                      onCheckedChange={() => handleXAxisVariableToggle(dimension.id)}
+                                    />
+                                    <Label htmlFor={`x-${dimension.id}`} className="text-sm cursor-pointer">
+                                      {dimension.name}
+                                    </Label>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Y-Axis Variable Selection */}
+                          <div>
+                            <div className="flex justify-between items-center mb-2">
+                              <Label className="text-sm font-medium">Variabel Sumbu Y (Ukuran)</Label>
+                              <Badge variant="outline" className="text-xs">
+                                {selectedYAxisVariables.length}/5 dipilih
+                              </Badge>
+                            </div>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <p className="text-xs text-muted-foreground mb-2 flex items-center">
+                                    <Info className="h-3 w-3 mr-1" />
+                                    Kosongkan untuk menggunakan jumlah data sebagai nilai Y
+                                  </p>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="max-w-xs text-xs">
+                                    Jika tidak ada variabel Y yang dipilih, grafik akan menampilkan jumlah data untuk
+                                    setiap kategori X
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <div className="border rounded-md p-3 max-h-[150px] overflow-y-auto space-y-2">
+                              {measures.length === 0 ? (
+                                <p className="text-sm text-muted-foreground text-center">Tidak ada ukuran tersedia</p>
+                              ) : (
+                                measures.map((measure) => (
+                                  <div key={measure.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`y-${measure.id}`}
+                                      checked={selectedYAxisVariables.includes(measure.id)}
+                                      onCheckedChange={() => handleYAxisVariableToggle(measure.id)}
+                                    />
+                                    <Label htmlFor={`y-${measure.id}`} className="text-sm cursor-pointer">
+                                      {measure.name}
+                                    </Label>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Variabel Grup / Warna Selection */}
+                          <div>
+                            <div className="flex justify-between items-center mb-2">
+                              <Label className="text-sm font-medium">Variabel Grup / Warna (Dimensi)</Label>
+                            </div>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <p className="text-xs text-muted-foreground mb-2 flex items-center">
+                                    <Info className="h-3 w-3 mr-1" />
+                                    Pilih variabel dimensi untuk pengelompokan dan pewarnaan dalam grafik
+                                  </p>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="max-w-xs text-xs">
+                                    Fitur ini hanya berlaku untuk tipe grafik batang tertentu
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+
+                            <div className="border rounded-md p-3 max-h-[150px] overflow-y-auto space-y-2">
+                              {availableGroupDimensions.length === 0 ? (
+                                <p className="text-sm text-muted-foreground text-center">
+                                  Tidak ada dimensi tersedia. Variabel yang sudah dipilih untuk sumbu X atau Y tidak
+                                  ditampilkan.
+                                </p>
+                              ) : (
+                                availableGroupDimensions.map((dimension) => (
+                                  <div key={dimension.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`group-${dimension.id}`}
+                                      checked={selectedGroupVariable === dimension.id}
+                                      onCheckedChange={(checked) => {
+                                        handleGroupVariableChange(checked ? dimension.id : null)
+                                      }}
+                                    />
+                                    <Label htmlFor={`group-${dimension.id}`} className="text-sm cursor-pointer">
+                                      {dimension.name}
+                                    </Label>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Label di Atas Batang Selection */}
+                          <div>
+                            <div className="flex justify-between items-center mb-2">
+                              <Label className="text-sm font-medium">Label di Atas Batang (Ukuran)</Label>
+                            </div>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <p className="text-xs text-muted-foreground mb-2 flex items-center">
+                                    <Info className="h-3 w-3 mr-1" />
+                                    Pilih variabel ukuran untuk menampilkan nilai di atas batang
+                                  </p>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="max-w-xs text-xs">
+                                    Fitur ini hanya berlaku untuk tipe grafik batang tertentu
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+
+                            <Select
+                              value={selectedLabelVariable || "none"}
+                              onValueChange={(value) => handleLabelVariableChange(value === "none" ? null : value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Pilih variabel untuk label" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Tidak ada</SelectItem>
+                                {availableLabelMeasures.map((measure) => (
+                                  <SelectItem key={measure.id} value={measure.id}>
+                                    {measure.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {availableLabelMeasures.length === 0 && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Tidak ada ukuran tersedia. Variabel yang sudah dipilih untuk sumbu X atau Y tidak
+                                ditampilkan.
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Proceed to Chart Type Selection Button */}
+                          <div>
+                            <Button
+                              className="w-full bg-primary hover:bg-primary/90"
+                              onClick={handleProceedToChartType}
+                              disabled={!canProceedToChartType}
+                            >
+                              Lanjut ke Pemilihan Grafik
+                              <ArrowRight className="ml-2 h-4 w-4" />
+                            </Button>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Step 2: Chart Type Selection */}
+                      {currentStep === "chartType" && (
+                        <>
+                          <div className="mb-4">
+                            <Button variant="outline" size="sm" onClick={handleBackToVariables} className="mb-4">
+                              &larr; Kembali ke Pemilihan Variabel
+                            </Button>
+
+                            <div className="flex items-center justify-between mb-2">
+                              <Label className="text-sm font-medium">Jenis Grafik</Label>
+                              {recommendedChartTypes.length < chartTypes.length && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="flex items-center text-amber-500">
+                                        <Lightbulb className="h-4 w-4 mr-1" />
+                                        <span className="text-xs">Rekomendasi</span>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="max-w-xs text-sm">
+                                        Jenis grafik yang direkomendasikan berdasarkan variabel yang Anda pilih
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Chart Type Selection */}
+                          {recommendedChartTypes.length === 0 ? (
+                            <div className="p-4 border rounded-md bg-amber-50 text-amber-700">
+                              <p className="text-sm">
+                                Tidak ada jenis grafik yang sesuai dengan variabel yang dipilih. Silakan kembali dan
+                                sesuaikan pemilihan variabel.
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-2">
+                              {recommendedChartTypes.map((chartType) => (
+                                <div key={chartType.id} className="relative">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleChartTypeSelect(chartType.id)}
+                                    className={`w-full p-3 border rounded-md flex flex-col items-center justify-center text-center transition-colors ${
+                                      selectedChartType === chartType.id
+                                        ? "border-primary bg-primary/5"
+                                        : "border-gray-200 hover:border-gray-300"
+                                    }`}
+                                  >
+                                    <chartType.icon className="h-6 w-6 mb-1" />
+                                    <span className="text-sm font-medium">{chartType.name}</span>
+                                  </button>
+                                  {chartType.supportsGrouping && (
+                                    <div className="absolute -top-1 -left-1">
+                                      <Badge className="bg-blue-500">
+                                        <Layers className="h-3 w-3 mr-1" />
+                                      </Badge>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {selectedChartType && (
+                            <div className="mt-4">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex items-center text-sm text-muted-foreground">
+                                      <Info className="h-4 w-4 mr-1" />
+                                      <span>{chartTypes.find((c) => c.id === selectedChartType)?.description}</span>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="max-w-xs text-sm">
+                                      {chartTypes.find((c) => c.id === selectedChartType)?.recommendedFor}
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                          )}
+
+                          {/* Generate Chart Button */}
+                          <div className="mt-6">
+                            <Button
+                              className="w-full bg-primary hover:bg-primary/90"
+                              onClick={handleGenerateChart}
+                              disabled={!selectedChartType}
+                            >
+                              Buat Grafik
+                            </Button>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Selected Variables Summary */}
+                      {selectedXAxisVariables.length > 0 && (
+                        <div>
+                          <h3 className="text-sm font-medium mb-2">Variabel Terpilih</h3>
+                          <div className="space-y-2">
+                            {selectedXAxisVariables.length > 0 && (
+                              <div>
+                                <Badge variant="outline" className="mr-2">
+                                  Sumbu X
+                                </Badge>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {selectedXAxisVariables.map((id) => (
+                                    <Badge key={id} variant="secondary" className="text-xs">
+                                      {getVariableName(id)}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            <div>
+                              <Badge variant="outline" className="mr-2">
+                                Sumbu Y
+                              </Badge>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {selectedYAxisVariables.length > 0 ? (
+                                  selectedYAxisVariables.map((id) => (
+                                    <Badge key={id} variant="secondary" className="text-xs">
+                                      {getVariableName(id)}
+                                    </Badge>
+                                  ))
+                                ) : (
+                                  <Badge variant="secondary" className="text-xs">
+                                    Jumlah Data (Count)
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+
+                            {selectedGroupVariable && (
+                              <div>
+                                <Badge variant="outline" className="mr-2">
+                                  Grup / Warna
+                                </Badge>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  <Badge variant="secondary" className="text-xs">
+                                    {getVariableName(selectedGroupVariable)}
+                                  </Badge>
+                                </div>
+                              </div>
+                            )}
+
+                            {selectedLabelVariable && (
+                              <div>
+                                <Badge variant="outline" className="mr-2">
+                                  Label di Atas Batang
+                                </Badge>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  <Badge variant="secondary" className="text-xs">
+                                    {getVariableName(selectedLabelVariable)}
+                                  </Badge>
+                                </div>
+                              </div>
+                            )}
+
+                            {selectedChartType && (
+                              <div>
+                                <Badge variant="outline" className="mr-2">
+                                  Jenis Grafik
+                                </Badge>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  <Badge variant="secondary" className="text-xs">
+                                    {chartTypes.find((c) => c.id === selectedChartType)?.name}
+                                  </Badge>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Main content area - chart display */}
+          <div className="w-full lg:w-2/3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Visualisasi Data</CardTitle>
+                  <CardDescription>
+                    {selectedDataset
+                      ? `Visualisasi data dari ${selectedDataset.name}`
+                      : "Pilih dataset untuk memvisualisasikan data"}
+                  </CardDescription>
+                </div>
+
+                {showChart && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="border-green-500 text-green-500 hover:bg-green-50">
+                        Unduh
+                        <ChevronDown className="ml-1 h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleDownload("excel")}>
+                        <FileSpreadsheet className="mr-2 h-4 w-4" />
+                        <span>Excel (CSV)</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownload("pdf")}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        <span>PDF</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownload("image")}>
+                        <ImageIcon className="mr-2 h-4 w-4" />
+                        <span>Gambar (PNG)</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </CardHeader>
+              <CardContent className="p-6">
+                {showChart ? (
+                  <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsList className="mb-4">
+                      <TabsTrigger value="chart">Grafik</TabsTrigger>
+                      <TabsTrigger value="data">Data</TabsTrigger>
+                      <TabsTrigger value="variables">Variabel</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="chart">
+                      <ChartDisplay
+                        data={chartData.data}
+                        chartType={selectedChartType}
+                        xAxisField={chartData.xAxisName}
+                        yAxisFields={chartData.yAxisNames}
+                        xAxisLabel={chartData.xAxisName}
+                        yAxisLabel="Nilai"
+                        groupName={chartData.groupName}
+                        groupValues={chartData.groupValues}
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="data">
+                      <div className="border rounded-md overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                {selectedXAxisVariables.length > 1
+                                  ? "Kombinasi Dimensi"
+                                  : getVariableName(selectedXAxisVariables[0])}
+                              </th>
+                              {chartData.yAxisNames.map((name: string) => (
+                                <th
+                                  key={name}
+                                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                >
+                                  {name === "count"
+                                    ? "Jumlah Data"
+                                    : name.includes("_")
+                                      ? `${name.split("_")[0] === "count" ? "Jumlah Data" : name.split("_")[0]} (${name.split("_")[1]})`
+                                      : name}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {chartData.data.map((row: any, index: number) => (
+                              <tr key={index}>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                  {row[chartData.xAxisName]}
+                                </td>
+                                {chartData.yAxisNames.map((name: string) => (
+                                  <td key={name} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {row[name]?.toLocaleString() || 0}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="variables">
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="text-sm font-medium mb-2">Variabel Sumbu X</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {selectedXAxisVariables.map((id) => {
+                              const variable = dimensions.find((d) => d.id === id)
+                              if (!variable) return null
+                              return (
+                                <div key={id} className="border rounded-md p-3">
+                                  <div className="flex items-center justify-between">
+                                    <p className="font-medium">{variable.name}</p>
+                                    <Badge variant="outline">Dimensi</Badge>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Tipe Data:{" "}
+                                    {variable.dataType === "string"
+                                      ? "Teks"
+                                      : variable.dataType === "number"
+                                        ? "Angka"
+                                        : "Tanggal"}
+                                  </p>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+
+                        <div>
+                          <h3 className="text-sm font-medium mb-2">Variabel Sumbu Y</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {selectedYAxisVariables.length > 0 ? (
+                              selectedYAxisVariables.map((id) => {
+                                const variable = measures.find((m) => m.id === id)
+                                if (!variable) return null
+                                return (
+                                  <div key={id} className="border rounded-md p-3">
+                                    <div className="flex items-center justify-between">
+                                      <p className="font-medium">{variable.name}</p>
+                                      <Badge variant="outline">Ukuran</Badge>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Tipe Data:{" "}
+                                      {variable.dataType === "string"
+                                        ? "Teks"
+                                        : variable.dataType === "number"
+                                          ? "Angka"
+                                          : "Tanggal"}
+                                    </p>
+                                  </div>
+                                )
+                              })
+                            ) : (
+                              <div className="border rounded-md p-3">
+                                <div className="flex items-center justify-between">
+                                  <p className="font-medium">Jumlah Data (Count)</p>
+                                  <Badge variant="outline">Ukuran</Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">Tipe Data: Angka</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Menghitung jumlah data untuk setiap kategori pada sumbu X
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {selectedGroupVariable && (
+                          <div>
+                            <h3 className="text-sm font-medium mb-2">Variabel Grup / Warna</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="border rounded-md p-3">
+                                <div className="flex items-center justify-between">
+                                  <p className="font-medium">{getVariableName(selectedGroupVariable)}</p>
+                                  <Badge variant="outline">Dimensi</Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Digunakan untuk pengelompokan dan pewarnaan dalam grafik
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {selectedLabelVariable && (
+                          <div>
+                            <h3 className="text-sm font-medium mb-2">Label di Atas Batang</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="border rounded-md p-3">
+                                <div className="flex items-center justify-between">
+                                  <p className="font-medium">{getVariableName(selectedLabelVariable)}</p>
+                                  <Badge variant="outline">Ukuran</Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Digunakan untuk menampilkan nilai di atas batang
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                ) : (
+                  <div className="h-[500px] flex items-center justify-center">
+                    <div className="text-center">
+                      <BarChart3 className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
+                      <h3 className="text-lg font-medium mb-2">Tidak Ada Grafik untuk Ditampilkan</h3>
+                      <p className="text-muted-foreground max-w-md">
+                        Pilih dataset, variabel sumbu X dan Y, lalu pilih jenis grafik dari panel samping untuk membuat
+                        visualisasi.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {showChart && selectedDataset && (
+                  <div className="text-sm text-muted-foreground mt-4">
+                    <p>
+                      <strong>Catatan:</strong> Data berasal dari {selectedDataset.name}. Sumber:{" "}
+                      {selectedDataset.source || "Tidak diketahui"}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
