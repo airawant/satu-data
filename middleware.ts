@@ -81,6 +81,12 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(loginUrl)
     }
 
+    // Tangani rute khusus dengan lebih baik
+    if (req.nextUrl.pathname === '/charts') {
+      // Pastikan bahwa rute /charts selalu dirender dengan stabil, menghindari error prerender
+      return NextResponse.next();
+    }
+
     return res
   } catch (error) {
     console.error('Middleware error:', error)
@@ -91,5 +97,5 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   // Daftar rute yang harus melalui middleware untuk pengecekan otentikasi
-  matcher: ['/admin/:path*', '/login', '/data-explorer', '/dashboard'],
+  matcher: ['/admin/:path*', '/login', '/data-explorer', '/dashboard', '/charts/:path*'],
 }

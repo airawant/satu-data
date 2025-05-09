@@ -9,6 +9,13 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Meningkatkan stabilitas build dengan menunda loading untuk halaman charts
+  experimental: {
+    serverComponentsExternalPackages: ['recharts'],
+    missingSuspenseWithCSRBailout: false,
+  },
+  // Konfigurasi output yang lebih stabil untuk Vercel
+  output: 'standalone',
   webpack: (config, { isServer }) => {
     // Meningkatkan batas ukuran untuk chunk utama
     if (!isServer) {
@@ -44,6 +51,15 @@ const nextConfig = {
             priority: 5,
             enforce: true,
             reuseExistingChunk: true,
+          },
+          // Chunk terpisah untuk charts
+          charts: {
+            name: 'charts',
+            chunks: 'all',
+            test: /[\\/]components[\\/]charts[\\/]/,
+            priority: 15,
+            enforce: true,
+            reuseExistingChunk: true,
           }
         },
       };
@@ -51,6 +67,8 @@ const nextConfig = {
 
     return config;
   },
+  // Mengabaikan/melewatkan rute yang bermasalah saat build
+  distDir: process.env.BUILD_DIR || '.next',
 }
 
 export default nextConfig

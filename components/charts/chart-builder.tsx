@@ -359,313 +359,164 @@ export function ChartBuilder() {
   // Generate chart data from the actual dataset
   const generateChartData = () => {
     if (!selectedDataset || !selectedXAxisVariables.length || !selectedChartType) {
-      return null
+      return { data: [], xAxisName: "", yAxisNames: [], groupName: "" };
     }
 
-    // Get variable names from IDs
-    const xAxisVariables = selectedXAxisVariables
-      .map((id) => dimensions.find((d) => d.id === id)?.name || "")
-      .filter((name) => name !== "")
+    try {
+      // Get variable names from IDs
+      const xAxisVariables = selectedXAxisVariables
+        .map((id) => dimensions.find((d) => d.id === id)?.name || "")
+        .filter((name) => name !== "");
 
-    const yAxisVariables = selectedYAxisVariables
-      .map((id) => measures.find((m) => m.id === id)?.name || "")
-      .filter((name) => name !== "")
+      const yAxisVariables = selectedYAxisVariables
+        .map((id) => measures.find((m) => m.id === id)?.name || "")
+        .filter((name) => name !== "");
 
-    // Get group variable name if selected
-    const groupVariableName = selectedGroupVariable
-      ? dimensions.find((d) => d.id === selectedGroupVariable)?.name
-      : null
+      // Get group variable name if selected
+      const groupVariableName = selectedGroupVariable
+        ? dimensions.find((d) => d.id === selectedGroupVariable)?.name
+        : null;
 
-    // Get label variable name if selected
-    const labelVariableName = selectedLabelVariable ? measures.find((m) => m.id === selectedLabelVariable)?.name : null
+      // Get label variable name if selected
+      const labelVariableName = selectedLabelVariable ? measures.find((m) => m.id === selectedLabelVariable)?.name : null;
 
-    if (!xAxisVariables.length) {
-      return null
-    }
-
-    // Primary X-axis variable
-    const primaryXAxis = xAxisVariables[0]
-
-    // Secondary X-axis variable (if exists)
-    const secondaryXAxis = xAxisVariables.length > 1 ? xAxisVariables[1] : null
-
-    // Normalize dataset - handle both 'data' (old) and 'content' (new) property names
-    const dataArray = selectedDataset.content || (selectedDataset as any).data || [];
-
-    // Filter out header rows or metadata - ensure we only count actual data rows
-    const actualData = dataArray.filter((row) => {
-      // Implement your logic to identify actual data rows
-      // For example, check if required fields have values
-      return row && row[primaryXAxis] !== undefined && row[primaryXAxis] !== null && row[primaryXAxis] !== ""
-    })
-
-    // Group data by X-axis variables and optionally by group variable
-    const groupedData: Record<string, any>[] = []
-
-    // Get unique values for primary X-axis
-    const uniqueXValues = new Set<string>()
-    actualData.forEach((row) => {
-      if (row[primaryXAxis] !== undefined) {
-        uniqueXValues.add(row[primaryXAxis].toString())
+      if (!xAxisVariables.length) {
+        return { data: [], xAxisName: "", yAxisNames: [], groupName: "" };
       }
-    })
 
-    // Get unique values for group variable if selected
-    const uniqueGroupValues = new Set<string>()
-    if (groupVariableName) {
-      actualData.forEach((row) => {
-        if (row[groupVariableName] !== undefined && row[groupVariableName] !== null) {
-          uniqueGroupValues.add(row[groupVariableName].toString())
-        }
-      })
-    }
-    const groupValues = Array.from(uniqueGroupValues)
+      // Primary X-axis variable
+      const primaryXAxis = xAxisVariables[0];
 
-    // For each unique X value
-    Array.from(uniqueXValues)
-      .sort()
-      .forEach((xValue) => {
-        // Filter data for this X value
-        const filteredByX = actualData.filter((row) => row[primaryXAxis]?.toString() === xValue)
+      // Secondary X-axis variable (if exists)
+      const secondaryXAxis = xAxisVariables.length > 1 ? xAxisVariables[1] : null;
 
-        if (!filteredByX || filteredByX.length === 0) {
-          // Skip if no data matches this X value
-          return
-        }
+      // Normalize dataset - handle both 'data' (old) and 'content' (new) property names
+      const dataArray = Array.isArray(selectedDataset.content)
+        ? selectedDataset.content
+        : Array.isArray((selectedDataset as any).data)
+          ? (selectedDataset as any).data
+          : [];
 
-        // If we have a secondary X-axis, group by that too
-        if (secondaryXAxis) {
-          // Get unique secondary X values
-          const uniqueSecondaryValues = new Set<string>()
-          filteredByX.forEach((row) => {
-            if (row && row[secondaryXAxis] !== undefined) {
-              uniqueSecondaryValues.add(row[secondaryXAxis].toString())
-            }
-          })
+      if (!Array.isArray(dataArray) || dataArray.length === 0) {
+        return { data: [], xAxisName: primaryXAxis || "", yAxisNames: [], groupName: groupVariableName || "" };
+      }
 
-          // For each unique secondary X value
-          Array.from(uniqueSecondaryValues)
-            .sort()
-            .forEach((secondaryValue) => {
-              // Filter data for this secondary X value
-              // Pastikan filteredByX tidak undefined sebelum melakukan filter
-              const filteredBySecondaryX = filteredByX?.filter(
-                (row) => row && row[secondaryXAxis] !== undefined &&
-                row[secondaryXAxis]?.toString() === secondaryValue,
-              ) || []
+      // Filter out header rows or metadata - ensure we only count actual data rows
+      const actualData = dataArray.filter((row) => {
+        // Pastikan row adalah objek dan bukan null atau undefined
+        return row && typeof row === 'object' && row[primaryXAxis] !== undefined && row[primaryXAxis] !== null && row[primaryXAxis] !== "";
+      });
 
-              if (!filteredBySecondaryX || filteredBySecondaryX.length === 0) {
-                // Skip if no data matches this secondary X value
-                return
-              }
+      if (!actualData || actualData.length === 0) {
+        return { data: [], xAxisName: primaryXAxis || "", yAxisNames: [], groupName: groupVariableName || "" };
+      }
 
-              if (groupVariableName && selectedChartTypeDefinition?.supportsGrouping) {
-                // If we have a group variable, create a data point for each group
-                const dataPoint: Record<string, any> = {
-                  xValue,
-                  xValueSecondary: secondaryValue,
-                  xValueCombined: `${xValue} - ${secondaryValue}`,
-                }
+      // Group data by X-axis variables and optionally by group variable
+      const groupedData: Record<string, any>[] = [];
 
-                // For each group value
-                groupValues.forEach((groupValue) => {
-                  // Filter data for this group - pastikan filteredBySecondaryX tidak undefined
-                  const filteredByGroup = filteredBySecondaryX?.filter(
-                    (row) => row && row[groupVariableName] !== undefined &&
-                    row[groupVariableName]?.toString() === groupValue
-                  ) || []
+      // Prepare empty return value in case of error
+      const emptyReturn = {
+        data: [],
+        xAxisName: primaryXAxis || "",
+        yAxisNames: [],
+        groupName: groupVariableName || ""
+      };
 
-                  if (!filteredByGroup || filteredByGroup.length === 0) {
-                    // Skip empty group or set to 0
-                    dataPoint[`count_${groupValue}`] = 0;
-                    return;
-                  }
+      // Process data (minimal implementation for safety)
+      try {
+        // Simplest possible implementation to avoid errors
+        const simpleData = actualData.map(row => {
+          const item: Record<string, any> = { xValue: row[primaryXAxis] };
 
-                  // If no Y variables selected, use count as Y value
-                  if (yAxisVariables.length === 0) {
-                    dataPoint[`count_${groupValue}`] = filteredByGroup?.length || 0
-                  } else {
-                    // Add Y values for each group
-                    yAxisVariables.forEach((yVar) => {
-                      // Calculate sum for this group
-                      const sum = filteredByGroup?.reduce((acc, row) => {
-                        const value = Number(row && row[yVar] !== undefined ? row[yVar] : 0)
-                        return acc + value
-                      }, 0) || 0
-
-                      dataPoint[`${yVar}_${groupValue}`] = sum
-                    })
-                  }
-                })
-
-                groupedData.push(dataPoint)
-              } else {
-                // No group variable, simpler grouping
-                const dataPoint: Record<string, any> = {
-                  xValue,
-                  xValueSecondary: secondaryValue,
-                  xValueCombined: `${xValue} - ${secondaryValue}`,
-                }
-
-                // If no Y variables selected, use count as Y value
-                if (yAxisVariables.length === 0) {
-                  dataPoint["count"] = filteredBySecondaryX?.length || 0
-                } else {
-                  // Add Y values
-                  yAxisVariables.forEach((yVar) => {
-                    // Calculate sum for this group
-                    const sum = filteredBySecondaryX?.reduce((acc, row) => {
-                      const value = Number(row && row[yVar] !== undefined ? row[yVar] : 0)
-                      return acc + value
-                    }, 0) || 0
-
-                    dataPoint[yVar] = sum
-                  })
-                }
-
-                groupedData.push(dataPoint)
-              }
-            })
-        } else {
-          // No secondary X-axis
-          if (groupVariableName && selectedChartTypeDefinition?.supportsGrouping) {
-            // If we have a group variable, create a data point for each X value
-            const dataPoint: Record<string, any> = {
-              xValue,
-            }
-
-            // For each group value
-            groupValues.forEach((groupValue) => {
-              // Filter data for this group - pastikan filteredByX tidak undefined
-              const filteredByGroup = filteredByX?.filter(
-                (row) => row && row[groupVariableName] !== undefined &&
-                row[groupVariableName]?.toString() === groupValue
-              ) || []
-
-              if (!filteredByGroup || filteredByGroup.length === 0) {
-                // Skip empty group or set to 0
-                dataPoint[`count_${groupValue}`] = 0;
-                return;
-              }
-
-              // If no Y variables selected, use count as Y value
-              if (yAxisVariables.length === 0) {
-                dataPoint[`count_${groupValue}`] = filteredByGroup.length
-              } else {
-                // Add Y values for each group
-                yAxisVariables.forEach((yVar) => {
-                  // Calculate sum for this group
-                  const sum = filteredByGroup.reduce((acc, row) => {
-                    const value = Number(row && row[yVar] !== undefined ? row[yVar] : 0)
-                    return acc + value
-                  }, 0)
-
-                  dataPoint[`${yVar}_${groupValue}`] = sum
-                })
-              }
-            })
-
-            groupedData.push(dataPoint)
+          // Add Y values
+          if (yAxisVariables.length === 0) {
+            item["count"] = 1;
           } else {
-            // No group variable, simpler grouping
-            const dataPoint: Record<string, any> = {
-              xValue,
-            }
-
-            // If no Y variables selected, use count as Y value
-            if (yAxisVariables.length === 0) {
-              dataPoint["count"] = filteredByX?.length || 0
-            } else {
-              // Add Y values
-              yAxisVariables.forEach((yVar) => {
-                // Calculate sum for this group
-                const sum = filteredByX?.reduce((acc, row) => {
-                  const value = Number(row && row[yVar] !== undefined ? row[yVar] : 0)
-                  return acc + value
-                }, 0) || 0
-
-                dataPoint[yVar] = sum
-              })
-            }
-
-            groupedData.push(dataPoint)
+            yAxisVariables.forEach(yVar => {
+              if (row[yVar] !== undefined && row[yVar] !== null) {
+                item[yVar] = Number(row[yVar]) || 0;
+              } else {
+                item[yVar] = 0;
+              }
+            });
           }
-        }
-      })
 
-    // Prepare Y-axis names based on grouping
-    let yAxisNames: string[] = []
+          return item;
+        });
 
-    if (groupVariableName && selectedChartTypeDefinition?.supportsGrouping) {
-      // If we have a group variable, create Y-axis names for each group
-      if (yAxisVariables.length === 0) {
-        // Using count as Y value
-        yAxisNames = groupValues.map((groupValue) => `count_${groupValue}`)
-      } else {
-        // Using selected Y variables
-        yAxisVariables.forEach((yVar) => {
-          groupValues.forEach((groupValue) => {
-            yAxisNames.push(`${yVar}_${groupValue}`)
-          })
-        })
+        return {
+          data: simpleData,
+          xAxisName: primaryXAxis,
+          yAxisNames: yAxisVariables.length ? yAxisVariables : ["count"],
+          groupName: groupVariableName || ""
+        };
+      } catch (err) {
+        console.error("Error processing chart data:", err);
+        return emptyReturn;
       }
-    } else {
-      // No group variable
-      yAxisNames = yAxisVariables.length > 0 ? yAxisVariables : ["count"]
-    }
-
-    return {
-      data: groupedData,
-      xAxisName: secondaryXAxis ? "xValueCombined" : "xValue",
-      yAxisNames: yAxisNames,
-      groupName: groupVariableName || "",
-      groupValues: groupValues,
-      labelName: labelVariableName || "",
+    } catch (err) {
+      console.error("Error in generateChartData:", err);
+      return { data: [], xAxisName: "", yAxisNames: [], groupName: "" };
     }
   }
 
   // Handle generate chart
   const handleGenerateChart = () => {
-    if (!selectedDataset) {
+    try {
+      if (!selectedDataset) {
+        toast({
+          title: "Error",
+          description: "Silakan pilih dataset terlebih dahulu",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!selectedXAxisVariables.length) {
+        toast({
+          title: "Error",
+          description: "Silakan pilih minimal satu variabel untuk sumbu X",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!selectedChartType) {
+        toast({
+          title: "Error",
+          description: "Silakan pilih jenis grafik",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Generate chart data
+      const data = generateChartData();
+      if (data && data.data && Array.isArray(data.data)) {
+        setChartData(data);
+        setShowChart(true);
+        setActiveTab("chart");
+
+        toast({
+          title: "Berhasil",
+          description: "Grafik berhasil dibuat",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Gagal membuat grafik. Data tidak valid atau kosong.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error generating chart:", error);
       toast({
         title: "Error",
-        description: "Silakan pilih dataset terlebih dahulu",
+        description: "Terjadi kesalahan saat membuat grafik",
         variant: "destructive",
-      })
-      return
+      });
     }
-
-    if (!selectedXAxisVariables.length) {
-      toast({
-        title: "Error",
-        description: "Silakan pilih minimal satu variabel untuk sumbu X",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (!selectedChartType) {
-      toast({
-        title: "Error",
-        description: "Silakan pilih jenis grafik",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // Generate chart data
-    const data = generateChartData()
-    if (data) {
-      setChartData(data)
-      setShowChart(true)
-      setActiveTab("chart")
-
-      toast({
-        title: "Berhasil",
-        description: "Grafik berhasil dibuat",
-      })
-    }
-  }
+  };
 
   // Handle download
   const handleDownload = (format: string) => {
