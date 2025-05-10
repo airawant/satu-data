@@ -249,7 +249,7 @@ export function QueryChart({ data, characteristics, years }: ChartProps) {
                     <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
                     <YAxis />
                     <Tooltip formatter={(value) => value.toLocaleString()} />
-                    <Legend />
+                    {/* <Legend /> */}
                     <Bar dataKey="value" name={`${selectedCharacteristic} (${selectedYear})`} fill="#E53E3E" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -270,7 +270,7 @@ export function QueryChart({ data, characteristics, years }: ChartProps) {
                     <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
                     <YAxis />
                     <Tooltip formatter={(value) => value.toLocaleString()} />
-                    <Legend />
+                    {/* <Legend /> */}
                     <Line
                       type="monotone"
                       dataKey="value"
@@ -302,7 +302,7 @@ export function QueryChart({ data, characteristics, years }: ChartProps) {
                       ))}
                     </Pie>
                     <Tooltip formatter={(value) => value.toLocaleString()} />
-                    <Legend />
+                    {/* <Legend /> */}
                   </RechartsPieChart>
                 </ResponsiveContainer>
               )}
@@ -322,7 +322,7 @@ export function QueryChart({ data, characteristics, years }: ChartProps) {
                     <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
                     <YAxis />
                     <Tooltip formatter={(value) => value.toLocaleString()} />
-                    <Legend />
+                    {/* <Legend /> */}
                     {characteristics.map((characteristic, index) => (
                       <Bar
                         key={characteristic}
@@ -351,7 +351,7 @@ export function QueryChart({ data, characteristics, years }: ChartProps) {
                     <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
                     <YAxis />
                     <Tooltip formatter={(value) => value.toLocaleString()} />
-                    <Legend />
+                    {/* <Legend /> */}
                     {years.map((year, index) => (
                       <Area
                         key={year}
@@ -383,7 +383,7 @@ export function QueryChart({ data, characteristics, years }: ChartProps) {
                     <XAxis type="number" />
                     <YAxis dataKey="name" type="category" width={80} />
                     <Tooltip formatter={(value) => value.toLocaleString()} />
-                    <Legend />
+                    {/* <Legend /> */}
                     <Bar
                       dataKey="value"
                       name={`${selectedCharacteristic} (${selectedYear})`}

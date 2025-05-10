@@ -37,7 +37,6 @@ export function BarChartComponent({ data, xAxis, yAxis, fields }: BarChartCompon
           <XAxis dataKey={xAxis} label={{ value: xAxisField?.name || xAxis, position: "insideBottom", offset: -5 }} />
           <YAxis label={{ value: yAxisField?.name || yAxis, angle: -90, position: "insideLeft" }} />
           <ChartTooltip content={<ChartTooltipContent />} />
-          <Legend />
           <Bar dataKey={yAxis} fill="var(--color-yAxis)" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>

@@ -322,13 +322,19 @@ export function ChartBuilder() {
 
   // Handle chart type selection
   const handleChartTypeSelect = (chartType: string) => {
-    setSelectedChartType(chartType)
+    setSelectedChartType(chartType);
 
-    // Auto-generate chart when chart type is selected
+    // Kosongkan chart data saat memilih jenis grafik untuk menghindari tampilan chart yang tidak valid
+    if (chartType === "pie") {
+      setShowChart(false);
+      setChartData({ data: [], xAxisName: "", yAxisNames: [], groupName: "" });
+    } else {
+      // Hanya otomatis generate chart jika bukan pie chart
     setTimeout(() => {
-      handleGenerateChart()
-    }, 100)
+        handleGenerateChart();
+      }, 100);
   }
+  };
 
   // Handle proceeding to chart type selection
   const handleProceedToChartType = () => {
@@ -404,15 +410,26 @@ export function ChartBuilder() {
       // Filter out header rows or metadata - ensure we only count actual data rows
       const actualData = dataArray.filter((row) => {
         // Pastikan row adalah objek dan bukan null atau undefined
-        return row && typeof row === 'object' && row[primaryXAxis] !== undefined && row[primaryXAxis] !== null && row[primaryXAxis] !== "";
+        if (!row || typeof row !== 'object') {
+          return false;
+        }
+
+        // Periksa apakah ini adalah header kolom (biasanya header tidak memiliki nilai numerik)
+        const isPossiblyHeader = yAxisVariables.length > 0 && yAxisVariables.every(yVar => {
+          const val = row[yVar];
+          // Header biasanya berisi string seperti nama kolom atau description
+          return val === undefined || val === null || (typeof val === 'string' && isNaN(Number(val)));
+        });
+
+        // Tolak row jika tidak memiliki nilai x yang valid ATAU terdeteksi sebagai header
+        const hasValidX = row[primaryXAxis] !== undefined && row[primaryXAxis] !== null;
+
+        return hasValidX && !isPossiblyHeader;
       });
 
       if (!actualData || actualData.length === 0) {
         return { data: [], xAxisName: primaryXAxis || "", yAxisNames: [], groupName: groupVariableName || "" };
       }
-
-      // Group data by X-axis variables and optionally by group variable
-      const groupedData: Record<string, any>[] = [];
 
       // Prepare empty return value in case of error
       const emptyReturn = {
@@ -422,22 +439,216 @@ export function ChartBuilder() {
         groupName: groupVariableName || ""
       };
 
-      // Process data (minimal implementation for safety)
+      // Process data based on chart type
       try {
-        // Simplest possible implementation to avoid errors
-        const simpleData = actualData.map(row => {
-          const item: Record<string, any> = { xValue: row[primaryXAxis] };
+        // Untuk grafik yang memerlukan data agregat
+        if (["bar", "line", "pie", "stacked-bar", "area", "horizontal-bar"].includes(selectedChartType)) {
+          // Agregasi data berdasarkan sumbu X
+          const aggregatedData: Record<string, any> = {};
+
+          actualData.forEach(row => {
+            const xValue = row[primaryXAxis];
+
+            // Skip nilai x yang tidak valid
+            if (xValue === undefined || xValue === null || xValue === "") {
+              return; // Lanjut ke row berikutnya
+            }
+
+            const xKey = String(xValue);
+
+            if (!aggregatedData[xKey]) {
+              aggregatedData[xKey] = {
+                [primaryXAxis]: xKey,
+                count: 0
+              };
+
+              // Initialize all y-axis values to 0
+              if (yAxisVariables.length > 0) {
+                yAxisVariables.forEach(yVar => {
+                  aggregatedData[xKey][yVar] = 0;
+                });
+              }
+            }
+
+            // Increment count
+            aggregatedData[xKey].count += 1;
+
+            // Sum numeric values
+            if (yAxisVariables.length > 0) {
+              yAxisVariables.forEach(yVar => {
+                const yValue = row[yVar];
+                if (yValue !== undefined && yValue !== null) {
+                  // Convert to number first
+                  const numValue = Number(yValue);
+                  if (!isNaN(numValue)) {
+                    aggregatedData[xKey][yVar] += numValue;
+                  }
+                }
+              });
+            }
+          });
+
+          // Convert to array
+          const result = Object.values(aggregatedData);
+
+          // Sort the result by X-axis values if they are dates or numbers
+          const sortedResult = [...result].sort((a, b) => {
+            const aValue = a[primaryXAxis];
+            const bValue = b[primaryXAxis];
+
+            // If both values can be parsed as dates
+            if (!isNaN(Date.parse(aValue)) && !isNaN(Date.parse(bValue))) {
+              return new Date(aValue).getTime() - new Date(bValue).getTime();
+            }
+
+            // If both values can be parsed as numbers
+            if (!isNaN(Number(aValue)) && !isNaN(Number(bValue))) {
+              return Number(aValue) - Number(bValue);
+            }
+
+            // Default to string comparison
+            return String(aValue).localeCompare(String(bValue));
+          });
+
+          // Batasi jumlah data untuk visualisasi yang lebih baik
+          let finalResult = sortedResult;
+
+          // Untuk grafik pie, batasi jumlah data
+          if (selectedChartType === "pie" && finalResult.length > 15) {
+            // Ambil top 14 value tertinggi berdasarkan y value atau count
+            const sortField = yAxisVariables.length > 0 ? yAxisVariables[0] : "count";
+
+            // Pastikan data sudah diurutkan dengan benar sebelum dipotong
+            const topItems = [...finalResult]
+              .sort((a, b) => {
+                // Pastikan nilai valid untuk perbandingan
+                const valueA = Number(a[sortField]) || 0;
+                const valueB = Number(b[sortField]) || 0;
+                return valueB - valueA; // Sort descending
+              })
+              .slice(0, 14);
+
+            // Gabungkan sisanya menjadi "Lainnya"
+            const otherItems = finalResult.filter(item => !topItems.includes(item));
+            if (otherItems.length > 0) {
+              const otherItem: Record<string, any> = {
+                [primaryXAxis]: "Lainnya",
+                count: 0
+              };
+
+              // Tambahkan semua nilai lainnya
+              yAxisVariables.forEach(yVar => {
+                otherItem[yVar] = otherItems.reduce((sum, item) => {
+                  const val = Number(item[yVar]) || 0;
+                  return sum + val;
+                }, 0);
+              });
+
+              // Hitung jumlah total
+              otherItem.count = otherItems.reduce((sum, item) => {
+                const val = Number(item.count) || 0;
+                return sum + val;
+              }, 0);
+
+              // Tambahkan kategori "Lainnya" hanya jika nilainya > 0
+              if (otherItem.count > 0 || (yAxisVariables.length > 0 && otherItem[yAxisVariables[0]] > 0)) {
+                topItems.push(otherItem);
+              }
+            }
+
+            finalResult = topItems;
+          }
+          // Untuk grafik batang/garis, batasi jumlah data jika terlalu banyak
+          else if (["bar", "line", "stacked-bar", "area", "horizontal-bar"].includes(selectedChartType) && finalResult.length > 30) {
+            // Untuk grafik batang horizontal, batasi lebih ketat untuk keterbacaan
+            const maxItems = selectedChartType === "horizontal-bar" ? 15 : 30;
+
+            // Ambil data sesuai dengan jenis grafik (bar: tertinggi, line/area: berurutan)
+            if (["bar", "stacked-bar", "horizontal-bar"].includes(selectedChartType)) {
+              const sortField = yAxisVariables.length > 0 ? yAxisVariables[0] : "count";
+              finalResult = [...finalResult].sort((a, b) => (b[sortField] || 0) - (a[sortField] || 0)).slice(0, maxItems);
+            } else {
+              // Untuk time series, ambil data dengan interval yang sesuai
+              const interval = Math.ceil(finalResult.length / maxItems);
+              finalResult = finalResult.filter((_, index) => index % interval === 0);
+
+              // Pastikan data terakhir selalu dimasukkan
+              if (finalResult.length > 0 && finalResult[finalResult.length - 1] !== sortedResult[sortedResult.length - 1]) {
+                finalResult.push(sortedResult[sortedResult.length - 1]);
+              }
+            }
+          }
+
+          return {
+            data: finalResult,
+            xAxisName: primaryXAxis,
+            yAxisNames: yAxisVariables.length ? yAxisVariables : ["count"],
+            groupName: groupVariableName || "",
+            groupValues: groupVariableName ? [...new Set(actualData.map(row => row[groupVariableName]))] : [],
+            labelName: labelVariableName || ""
+          };
+        }
+        // Untuk scatter chart yang memerlukan data mentah
+        else if (selectedChartType === "scatter") {
+          // Clean the data for scatter plot
+          const scatterData = actualData
+            .filter(row => {
+              // Pastikan row memiliki nilai x yang valid
+              if (row[primaryXAxis] === undefined || row[primaryXAxis] === null || row[primaryXAxis] === "") {
+                return false;
+              }
+
+              // Pastikan row memiliki semua nilai y yang diperlukan
+              return yAxisVariables.every(yVar => {
+                const val = row[yVar];
+                return val !== undefined && val !== null && !isNaN(Number(val));
+              });
+            })
+            .map(row => {
+              const item: Record<string, any> = {};
+
+              // Add X-axis identifier
+              item[primaryXAxis] = row[primaryXAxis];
+
+              // Add Y variables as numeric values
+              yAxisVariables.forEach(yVar => {
+                const numValue = Number(row[yVar]);
+                item[yVar] = !isNaN(numValue) ? numValue : 0;
+              });
+
+              return item;
+            });
+
+          return {
+            data: scatterData,
+            xAxisName: primaryXAxis || "",
+            yAxisNames: yAxisVariables,
+            groupName: groupVariableName || "",
+            groupValues: groupVariableName ? [...new Set(actualData.map(row => row[groupVariableName]))] : [],
+            labelName: labelVariableName || ""
+          };
+        }
+        // Fallback untuk jenis grafik lainnya
+        else {
+          // Simplest possible implementation - convert data to numbers
+          const simpleData = actualData
+            .filter(row => {
+              // Pastikan row memiliki nilai x yang valid
+              return row[primaryXAxis] !== undefined && row[primaryXAxis] !== null && row[primaryXAxis] !== "";
+            })
+            .map(row => {
+              const item: Record<string, any> = {};
+
+              // Add X-axis value
+              item[primaryXAxis] = row[primaryXAxis];
 
           // Add Y values
           if (yAxisVariables.length === 0) {
             item["count"] = 1;
           } else {
             yAxisVariables.forEach(yVar => {
-              if (row[yVar] !== undefined && row[yVar] !== null) {
-                item[yVar] = Number(row[yVar]) || 0;
-              } else {
-                item[yVar] = 0;
-              }
+                  const numValue = Number(row[yVar]);
+                  item[yVar] = !isNaN(numValue) ? numValue : 0;
             });
           }
 
@@ -448,8 +659,11 @@ export function ChartBuilder() {
           data: simpleData,
           xAxisName: primaryXAxis,
           yAxisNames: yAxisVariables.length ? yAxisVariables : ["count"],
-          groupName: groupVariableName || ""
+            groupName: groupVariableName || "",
+            groupValues: groupVariableName ? [...new Set(actualData.map(row => row[groupVariableName]))] : [],
+            labelName: labelVariableName || ""
         };
+        }
       } catch (err) {
         console.error("Error processing chart data:", err);
         return emptyReturn;
@@ -492,6 +706,26 @@ export function ChartBuilder() {
 
       // Generate chart data
       const data = generateChartData();
+
+      // Validasi khusus untuk grafik lingkaran
+      if (selectedChartType === "pie") {
+        // Pastikan data memiliki setidaknya 1 item valid untuk chart pie
+        const hasValidData = data.data && Array.isArray(data.data) && data.data.length > 0 &&
+          data.data.some(item => {
+            const fieldName = data.yAxisNames[0] || "count";
+            return item[fieldName] > 0;
+          });
+
+        if (!hasValidData) {
+          toast({
+            title: "Peringatan",
+            description: "Data tidak cocok untuk grafik lingkaran. Pilih data yang memiliki nilai positif.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       if (data && data.data && Array.isArray(data.data)) {
         setChartData(data);
         setShowChart(true);

@@ -37,7 +37,7 @@ export function LineChartComponent({ data, xAxis, yAxis, fields }: LineChartComp
           <XAxis dataKey={xAxis} label={{ value: xAxisField?.name || xAxis, position: "insideBottom", offset: -5 }} />
           <YAxis label={{ value: yAxisField?.name || yAxis, angle: -90, position: "insideLeft" }} />
           <ChartTooltip content={<ChartTooltipContent />} />
-          <Legend />
+          {/* <Legend /> */}
           <Line type="monotone" dataKey={yAxis} stroke="var(--color-yAxis)" activeDot={{ r: 8 }} />
         </LineChart>
       </ResponsiveContainer>
