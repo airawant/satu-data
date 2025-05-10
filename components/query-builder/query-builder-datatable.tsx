@@ -317,7 +317,11 @@ export function QueryBuilderDataTable() {
     if (yearVariable) {
       const uniqueYears = new Set<string>();
       dataArray.forEach((row) => {
-        if (row[yearVariable.name] !== undefined && row[yearVariable.name] !== null) {
+        if (row[yearVariable.name] !== undefined &&
+            row[yearVariable.name] !== null &&
+            row[yearVariable.name] !== "" &&
+            String(row[yearVariable.name]) !== "null" &&
+            String(row[yearVariable.name]) !== "undefined") {
           uniqueYears.add(row[yearVariable.name].toString());
         }
       });
@@ -456,7 +460,14 @@ export function QueryBuilderDataTable() {
     }
 
     // Set available years
-    setAvailableYears(dimensionValues["tahun"] || [])
+    const validYears = dimensionValues["tahun"]?.filter(year =>
+      year !== null &&
+      year !== undefined &&
+      year !== "" &&
+      year !== "null" &&
+      year !== "undefined"
+    ) || [];
+    setAvailableYears(validYears);
 
     // Convert string[] to { id: string, name: string }[] for availableYearDerivatives
     const derivativeFieldName = selectedDataset.variables.find((v) => v.name.toLowerCase().includes("triwulan") || v.name.toLowerCase().includes("semester") || v.name.toLowerCase().includes("bulan"))?.name || ""
@@ -609,7 +620,10 @@ export function QueryBuilderDataTable() {
       row && // pastikan row tidak null/undefined
       row[yearVariable.name] !== undefined &&
       row[yearVariable.name] !== null &&
-      selectedYears.includes(String(row[yearVariable.name]))
+      row[yearVariable.name] !== "" &&
+      selectedYears.includes(String(row[yearVariable.name])) &&
+      String(row[yearVariable.name]) !== "null" &&
+      String(row[yearVariable.name]) !== "undefined"
     );
 
     if (filteredData.length === 0) {
@@ -717,6 +731,9 @@ export function QueryBuilderDataTable() {
     const characteristicValueColumns: PivotColumn[] = [];
 
     selectedYears.forEach((year) => {
+      // Skip null or undefined years
+      if (!year || year === "null" || year === "undefined") return;
+
       Object.keys(characteristicsByVariable).forEach((variableName) => {
         const characteristicValues = characteristicsByVariable[variableName];
 
@@ -932,7 +949,10 @@ export function QueryBuilderDataTable() {
       row && // pastikan row tidak null/undefined
       row[yearVariable.name] !== undefined &&
       row[yearVariable.name] !== null &&
-      selectedYears.includes(String(row[yearVariable.name]))
+      row[yearVariable.name] !== "" &&
+      selectedYears.includes(String(row[yearVariable.name])) &&
+      String(row[yearVariable.name]) !== "null" &&
+      String(row[yearVariable.name]) !== "undefined"
     );
 
     if (filteredData.length === 0) {
@@ -982,6 +1002,9 @@ export function QueryBuilderDataTable() {
     const characteristicValueColumns: PivotColumn[] = [];
 
     selectedYears.forEach((year) => {
+      // Skip null or undefined years
+      if (!year || year === "null" || year === "undefined") return;
+
       Object.keys(characteristicsByVariable).forEach((variableName) => {
         const characteristicValues = characteristicsByVariable[variableName];
 
@@ -1502,7 +1525,7 @@ export function QueryBuilderDataTable() {
                                 onCheckedChange={() => handleYearSelect(year)}
                               />
                               <Label htmlFor={`year-${year}`} className="text-sm cursor-pointer">
-                                {year}
+                                {year && year !== "null" && year !== "undefined" ? year : "-"}
                               </Label>
                             </div>
                           ))}

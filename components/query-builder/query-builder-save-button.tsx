@@ -81,7 +81,7 @@ export function QueryBuilderSaveButton({
         datasetName={datasetName}
         configuration={{
           tableData,
-          years,
+          years: years.filter(year => year && year !== "null" && year !== "undefined"),
           yearDerivatives,
           characteristics,
           rowTitles,

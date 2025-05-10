@@ -250,7 +250,7 @@ export default function StatistikPage() {
                         colSpan={config.characteristics.length}
                         className="border bg-blue-900 p-2 text-center text-sm font-medium text-white"
                       >
-                        {year}
+                        {year && year !== "null" ? year : "-"}
                       </th>
                     ))}
                   </tr>
@@ -291,7 +291,7 @@ export default function StatistikPage() {
                       {/* Render data cells */}
                       {config.years.map((year: string) =>
                         config.characteristics.map((characteristic: string, charIndex: number) => {
-                          const key = `${year}_${characteristic}`
+                          const key = `${year && year !== "null" ? year : ""}_${characteristic}`
                           return (
                             <td key={`data-${rowIndex}-${year}-${charIndex}`} className="border p-2 text-right text-sm">
                               {row[key]?.toLocaleString() || "0.00"}
