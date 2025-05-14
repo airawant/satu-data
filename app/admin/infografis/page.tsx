@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter } from "next/navigation"
 import { AdminLayout } from "@/components/admin/layout"
 import { Button } from "@/components/ui/button"
@@ -82,7 +82,8 @@ interface Pagination {
   totalPages: number
 }
 
-export default function InfografisPage() {
+// Komponen utama untuk konten halaman infografis
+function InfografisPageContent() {
   const router = useRouter()
   const { toast } = useToast()
 
@@ -591,5 +592,26 @@ export default function InfografisPage() {
         </AlertDialogContent>
       </AlertDialog>
     </AdminLayout>
+  )
+}
+
+// Wrapper dengan Suspense boundary untuk mengatasi hydration error
+export default function InfografisPage() {
+  return (
+    <Suspense fallback={
+      <AdminLayout
+        title="Kelola Infografis"
+        description="Kelola semua infografis yang telah diunggah"
+      >
+        <div className="container py-6">
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mb-3"></div>
+            <p className="text-sm text-muted-foreground ml-3">Memuat data infografis...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    }>
+      <InfografisPageContent />
+    </Suspense>
   )
 }

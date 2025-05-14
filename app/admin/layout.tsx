@@ -1,14 +1,15 @@
 "use client"
 
 import { useAuth } from "@/contexts/auth-context"
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, Suspense } from "react"
 import { usePathname, useSearchParams, useRouter } from "next/navigation"
 
 // Storage keys untuk UI state
 const LAYOUT_LOADED_KEY = "psd_admin_layout_loaded";
 const LAST_AUTH_STATUS_KEY = "psd_last_auth_status";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+// Wrapper komponen dengan Suspense boundary untuk menangani hooks client-side
+function AdminLayoutInternal({ children }: { children: React.ReactNode }) {
   const { user, isLoading, refreshSession } = useAuth()
   const [isRedirecting, setIsRedirecting] = useState(false)
   const [layoutLoaded, setLayoutLoaded] = useState(false)
@@ -203,5 +204,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <p className="text-sm text-muted-foreground">Memuat halaman admin...</p>
       </div>
     </div>
+  )
+}
+
+// Komponen layout utama yang membungkus AdminLayoutInternal dengan Suspense boundary
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-3"></div>
+        <p className="text-sm text-muted-foreground">Memuat halaman admin...</p>
+      </div>
+    }>
+      <AdminLayoutInternal>{children}</AdminLayoutInternal>
+    </Suspense>
   )
 }
