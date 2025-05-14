@@ -12,7 +12,7 @@ interface AdminProtectedPageProps {
   redirectPath?: string
 }
 
-export function AdminProtectedPage({ children, redirectPath = "/dashboard" }: AdminProtectedPageProps) {
+export function AdminProtectedPage({ children, redirectPath = "/admin/dashboard" }: AdminProtectedPageProps) {
   const { user, isLoading } = useAuth()
   const router = useRouter()
 

@@ -22,10 +22,10 @@ export default function DashboardPage() {
 
   // Pengecekan otentikasi tambahan untuk mengarahkan pengguna yang belum login
   useEffect(() => {
-    // Jika loading otentikasi selesai dan tidak ada user, artinya pengguna belum login
+    // Hanya redirect jika tidak ada user dan loading auth sudah selesai
     if (!authLoading && !user) {
       console.log("Unauthorized access to dashboard, redirecting to login...")
-      router.push("/login?redirectTo=/dashboard")
+      router.push("/login?bypass=true&redirectTo=/admin/dashboard")
     }
   }, [user, authLoading, router])
 
@@ -61,7 +61,7 @@ export default function DashboardPage() {
           </AlertDescription>
         </Alert>
         <div className="mt-6 flex justify-center">
-          <Button onClick={() => router.push("/login?redirectTo=/dashboard")}>
+          <Button onClick={() => router.push("/login?bypass=true&redirectTo=/admin/dashboard")}>
             Login ke Akun
           </Button>
         </div>

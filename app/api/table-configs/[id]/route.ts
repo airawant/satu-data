@@ -13,7 +13,8 @@ interface Context {
 
 export async function GET(_: NextRequest, context: Context) {
   try {
-    const { id } = context.params;
+    const params = await context.params;
+    const { id } = params;
 
     const tableConfig = await getTableConfigById(id);
 
@@ -26,7 +27,8 @@ export async function GET(_: NextRequest, context: Context) {
 
     return NextResponse.json(tableConfig);
   } catch (error) {
-    console.error(`API Error - GET /api/table-configs/${context.params.id}:`, error);
+    const params = await context.params;
+    console.error(`API Error - GET /api/table-configs/${params.id}:`, error);
     return NextResponse.json(
       { error: 'Gagal mengambil konfigurasi tabel' },
       { status: 500 }
@@ -36,7 +38,8 @@ export async function GET(_: NextRequest, context: Context) {
 
 export async function PUT(req: NextRequest, context: Context) {
   try {
-    const { id } = context.params;
+    const params = await context.params;
+    const { id } = params;
     const data = await req.json();
 
     // Check if table config exists
@@ -54,7 +57,8 @@ export async function PUT(req: NextRequest, context: Context) {
 
     return NextResponse.json(updatedConfig);
   } catch (error) {
-    console.error(`API Error - PUT /api/table-configs/${context.params.id}:`, error);
+    const params = await context.params;
+    console.error(`API Error - PUT /api/table-configs/${params.id}:`, error);
     return NextResponse.json(
       { error: 'Gagal memperbarui konfigurasi tabel' },
       { status: 500 }
@@ -64,7 +68,8 @@ export async function PUT(req: NextRequest, context: Context) {
 
 export async function DELETE(_: NextRequest, context: Context) {
   try {
-    const { id } = context.params;
+    const params = await context.params;
+    const { id } = params;
 
     // Check if table config exists
     const existingConfig = await getTableConfigById(id);
@@ -81,7 +86,8 @@ export async function DELETE(_: NextRequest, context: Context) {
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
-    console.error(`API Error - DELETE /api/table-configs/${context.params.id}:`, error);
+    const params = await context.params;
+    console.error(`API Error - DELETE /api/table-configs/${params.id}:`, error);
     return NextResponse.json(
       { error: 'Gagal menghapus konfigurasi tabel' },
       { status: 500 }

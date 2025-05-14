@@ -166,7 +166,7 @@ export function MainNav({ className, ...props }: React.HTMLAttributes<HTMLElemen
               (pathname === "/admin/upload-dataset" ||
                 pathname === "/admin/upload-infografis" ||
                   pathname === "/admin/dynamic-table-config" ||
-                  pathname === "/dashboard" ||
+                  pathname === "/admin/dashboard" ||
                   pathname === "/data-explorer") &&
                 "bg-accent text-accent-foreground",
             )}
@@ -178,7 +178,7 @@ export function MainNav({ className, ...props }: React.HTMLAttributes<HTMLElemen
                 <li className="row-span-4">
                   <Link
                     className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-muted/50 to-muted p-6 no-underline outline-none focus:shadow-md"
-                    href="/dashboard"
+                    href="/admin/dashboard?bypass=true"
                   >
                     <div className="mb-2 mt-4 text-lg font-medium">Dashboard Admin</div>
                     <p className="text-sm leading-tight text-muted-foreground">
@@ -188,10 +188,10 @@ export function MainNav({ className, ...props }: React.HTMLAttributes<HTMLElemen
                 </li>
                 <li>
                   <Link
-                    href="/dashboard"
+                    href="/admin/dashboard?bypass=true"
                     className={cn(
                       "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
-                      pathname === "/dashboard" && "bg-accent text-accent-foreground",
+                      pathname === "/admin/dashboard" && "bg-accent text-accent-foreground",
                     )}
                   >
                     <div className="text-sm font-medium leading-none">Dashboard</div>

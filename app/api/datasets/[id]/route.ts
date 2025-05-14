@@ -12,7 +12,8 @@ interface Context {
  * Mengambil dataset berdasarkan ID
  */
 export async function GET(request: NextRequest, context: Context) {
-  const { id } = context.params;
+  const params = await context.params;
+  const { id } = params;
 
   try {
     const dataset = await getDatasetById(id);
@@ -39,7 +40,8 @@ export async function GET(request: NextRequest, context: Context) {
  * Memperbarui dataset berdasarkan ID
  */
 export async function PUT(request: NextRequest, context: Context) {
-  const { id } = context.params;
+  const params = await context.params;
+  const { id } = params;
 
   try {
     // Pastikan dataset ada
@@ -73,7 +75,8 @@ export async function PUT(request: NextRequest, context: Context) {
  * Menghapus dataset berdasarkan ID
  */
 export async function DELETE(request: NextRequest, context: Context) {
-  const { id } = context.params;
+  const params = await context.params;
+  const { id } = params;
 
   try {
     // Pastikan dataset ada

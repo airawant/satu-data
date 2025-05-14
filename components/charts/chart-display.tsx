@@ -152,7 +152,7 @@ export function ChartDisplay({
     return (
       <div className="h-[400px] flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground">Tidak ada data yang tersedia untuk visualisasi</p>
+        <p className="text-muted-foreground">Tidak ada data yang tersedia untuk visualisasi</p>
           <p className="text-xs text-muted-foreground mt-2">
             {(!data || !Array.isArray(data) || data.length === 0) ?
               "Dataset tidak memiliki data yang dapat divisualisasikan" :
@@ -334,12 +334,12 @@ export function ChartDisplay({
           <div className="w-full h-full flex flex-col">
             <ResponsiveContainer width="100%" height="90%" debounce={50}>
               <BarChart data={formattedData} margin={getMargin(chartType)}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey={xAxisField}
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey={xAxisField}
                   angle={-35}
-                  textAnchor="end"
-                  height={80}
+                textAnchor="end"
+                height={80}
                   label={{
                     value: xAxisLabel,
                     position: "insideBottom",
@@ -366,20 +366,20 @@ export function ChartDisplay({
                 />
                 <Tooltip content={<CustomTooltip />} />
                 {/* <Legend formatter={safeLegendFormatter} wrapperStyle={{ paddingTop: 10 }} /> */}
-                {yAxisFields.map((field, index) => (
-                  <Bar
-                    key={field}
-                    dataKey={field}
-                    name={field}
-                    fill={COLORS[index % COLORS.length]}
-                    radius={[4, 4, 0, 0]}
+              {yAxisFields.map((field, index) => (
+                <Bar
+                  key={field}
+                  dataKey={field}
+                  name={field}
+                  fill={COLORS[index % COLORS.length]}
+                  radius={[4, 4, 0, 0]}
                     isAnimationActive={true}
                     animationDuration={1000}
                     animationEasing="ease-out"
-                  />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
+                />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
             <TotalDataInfo data={formattedData} chartType={chartType} yAxisFields={yAxisFields} />
           </div>
         )}
@@ -388,16 +388,16 @@ export function ChartDisplay({
           <div className="w-full h-full flex flex-col">
             <ResponsiveContainer width="100%" height="90%" debounce={50}>
               <BarChart layout="vertical" data={formattedData} margin={getMargin(chartType)}>
-                <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   type="number"
                   label={{ value: yAxisLabel, position: "insideBottom", offset: -10 }}
                   tickFormatter={getYAxisTickFormatter()}
                   domain={['auto', 'auto']}
                 />
-                <YAxis
-                  dataKey={xAxisField}
-                  type="category"
+              <YAxis
+                dataKey={xAxisField}
+                type="category"
                   width={120}
                   tick={{ fontSize: 12 }}
                   tickFormatter={formatXAxisTick}
@@ -405,20 +405,20 @@ export function ChartDisplay({
                 />
                 <Tooltip content={<CustomTooltip />} />
                 {/* <Legend formatter={safeLegendFormatter} wrapperStyle={{ paddingTop: 10 }} /> */}
-                {yAxisFields.map((field, index) => (
-                  <Bar
-                    key={field}
-                    dataKey={field}
-                    name={field}
-                    fill={COLORS[index % COLORS.length]}
-                    radius={[0, 4, 4, 0]}
+              {yAxisFields.map((field, index) => (
+                <Bar
+                  key={field}
+                  dataKey={field}
+                  name={field}
+                  fill={COLORS[index % COLORS.length]}
+                  radius={[0, 4, 4, 0]}
                     isAnimationActive={true}
                     animationDuration={1000}
                     animationEasing="ease-out"
-                  />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
+                />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
             <TotalDataInfo data={formattedData} chartType={chartType} yAxisFields={yAxisFields} />
           </div>
         )}
@@ -427,13 +427,13 @@ export function ChartDisplay({
           <div className="w-full h-full flex flex-col">
             <ResponsiveContainer width="100%" height="90%" debounce={50}>
               <LineChart data={formattedData} margin={getMargin(chartType)}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey={xAxisField}
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                  label={{ value: xAxisLabel, position: "insideBottom", offset: -40 }}
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey={xAxisField}
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                label={{ value: xAxisLabel, position: "insideBottom", offset: -40 }}
                   tick={{ fontSize: 12 }}
                   tickFormatter={formatXAxisTick}
                   interval={formattedData.length > 10 ? "preserveStartEnd" : 0}
@@ -446,24 +446,24 @@ export function ChartDisplay({
                 />
                 <Tooltip content={<CustomTooltip />} />
                 {/* <Legend formatter={safeLegendFormatter} wrapperStyle={{ paddingTop: 10 }} /> */}
-                {yAxisFields.map((field, index) => (
-                  <Line
-                    key={field}
-                    type="monotone"
-                    dataKey={field}
-                    name={field}
-                    stroke={COLORS[index % COLORS.length]}
-                    strokeWidth={2}
-                    activeDot={{ r: 8 }}
+              {yAxisFields.map((field, index) => (
+                <Line
+                  key={field}
+                  type="monotone"
+                  dataKey={field}
+                  name={field}
+                  stroke={COLORS[index % COLORS.length]}
+                  strokeWidth={2}
+                  activeDot={{ r: 8 }}
                     dot={{ r: 4 }}
                     isAnimationActive={true}
                     animationDuration={1500}
                     animationEasing="ease-out"
                     connectNulls={true}
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
             <TotalDataInfo data={formattedData} chartType={chartType} yAxisFields={yAxisFields} />
           </div>
         )}
@@ -472,26 +472,26 @@ export function ChartDisplay({
           pieChartData.length > 0 ? (
             <div className="w-full h-full flex flex-col">
               <ResponsiveContainer width="100%" height="90%" debounce={50}>
-                <PieChart>
-                  <Pie
-                    data={pieChartData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={true}
+            <PieChart>
+              <Pie
+                data={pieChartData}
+                cx="50%"
+                cy="50%"
+                labelLine={true}
                     outerRadius={pieChartData.length > 10 ? 120 : 150}
-                    fill="#8884d8"
-                    dataKey="value"
-                    nameKey="name"
+                fill="#8884d8"
+                dataKey="value"
+                nameKey="name"
                     label={getPieChartLabel}
                     isAnimationActive={true}
                     animationDuration={1000}
                     animationEasing="ease-out"
                     minAngle={1.5} // Minimal sudut untuk slice yang sangat kecil
-                  >
-                    {pieChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
+              >
+                {pieChartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
                   <Tooltip content={<CustomTooltip />} />
                   <Legend
                     formatter={safeLegendFormatter}
@@ -502,8 +502,8 @@ export function ChartDisplay({
                     iconSize={10}
                     iconType="circle"
                   />
-                </PieChart>
-              </ResponsiveContainer>
+            </PieChart>
+          </ResponsiveContainer>
               <TotalDataInfo data={pieChartData} chartType={chartType} yAxisFields={yAxisFields} />
             </div>
           ) : (
@@ -521,13 +521,13 @@ export function ChartDisplay({
           <div className="w-full h-full flex flex-col">
             <ResponsiveContainer width="100%" height="90%" debounce={50}>
               <BarChart data={formattedData} margin={getMargin(chartType)}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey={xAxisField}
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                  label={{ value: xAxisLabel, position: "insideBottom", offset: -40 }}
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey={xAxisField}
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                label={{ value: xAxisLabel, position: "insideBottom", offset: -40 }}
                   tick={{ fontSize: 12 }}
                   tickFormatter={formatXAxisTick}
                   interval={formattedData.length > 10 ? "preserveStartEnd" : 0}
@@ -540,7 +540,7 @@ export function ChartDisplay({
                 />
                 <Tooltip content={<CustomTooltip />} />
                 {/* <Legend formatter={safeLegendFormatter} wrapperStyle={{ paddingTop: 10 }} /> */}
-                {yAxisFields.map((field, index) => (
+              {yAxisFields.map((field, index) => (
                   <Bar
                     key={field}
                     dataKey={field}
@@ -551,9 +551,9 @@ export function ChartDisplay({
                     animationDuration={1000}
                     animationEasing="ease-out"
                   />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
             <TotalDataInfo data={formattedData} chartType={chartType} yAxisFields={yAxisFields} />
           </div>
         )}
@@ -562,13 +562,13 @@ export function ChartDisplay({
           <div className="w-full h-full flex flex-col">
             <ResponsiveContainer width="100%" height="90%" debounce={50}>
               <AreaChart data={formattedData} margin={getMargin(chartType)}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey={xAxisField}
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                  label={{ value: xAxisLabel, position: "insideBottom", offset: -40 }}
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey={xAxisField}
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                label={{ value: xAxisLabel, position: "insideBottom", offset: -40 }}
                   tick={{ fontSize: 12 }}
                   tickFormatter={formatXAxisTick}
                   interval={formattedData.length > 10 ? "preserveStartEnd" : 0}
@@ -581,23 +581,23 @@ export function ChartDisplay({
                 />
                 <Tooltip content={<CustomTooltip />} />
                 {/* <Legend formatter={safeLegendFormatter} wrapperStyle={{ paddingTop: 10 }} /> */}
-                {yAxisFields.map((field, index) => (
-                  <Area
-                    key={field}
-                    type="monotone"
-                    dataKey={field}
-                    name={field}
-                    stroke={COLORS[index % COLORS.length]}
-                    fill={COLORS[index % COLORS.length]}
-                    fillOpacity={0.3}
+              {yAxisFields.map((field, index) => (
+                <Area
+                  key={field}
+                  type="monotone"
+                  dataKey={field}
+                  name={field}
+                  stroke={COLORS[index % COLORS.length]}
+                  fill={COLORS[index % COLORS.length]}
+                  fillOpacity={0.3}
                     isAnimationActive={true}
                     animationDuration={1500}
                     animationEasing="ease-out"
                     connectNulls={true}
-                  />
-                ))}
-              </AreaChart>
-            </ResponsiveContainer>
+                />
+              ))}
+            </AreaChart>
+          </ResponsiveContainer>
             <TotalDataInfo data={formattedData} chartType={chartType} yAxisFields={yAxisFields} />
           </div>
         )}
@@ -606,26 +606,26 @@ export function ChartDisplay({
           <div className="w-full h-full flex flex-col">
             <ResponsiveContainer width="100%" height="90%" debounce={50}>
               <ScatterChart margin={getMargin(chartType)}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="x"
-                  name={yAxisFields[0]}
-                  label={{ value: yAxisFields[0], position: "insideBottom", offset: -10 }}
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="x"
+                name={yAxisFields[0]}
+                label={{ value: yAxisFields[0], position: "insideBottom", offset: -10 }}
                   tickFormatter={getYAxisTickFormatter()}
                   domain={['auto', 'auto']}
-                />
-                <YAxis
-                  dataKey="y"
-                  name={yAxisFields[1]}
-                  label={{ value: yAxisFields[1], angle: -90, position: "insideLeft" }}
+              />
+              <YAxis
+                dataKey="y"
+                name={yAxisFields[1]}
+                label={{ value: yAxisFields[1], angle: -90, position: "insideLeft" }}
                   tickFormatter={getYAxisTickFormatter()}
                   domain={['auto', 'auto']}
-                />
-                {yAxisFields.length > 2 && <ZAxis dataKey="z" range={[50, 500]} name={yAxisFields[2]} />}
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      return (
+              />
+              {yAxisFields.length > 2 && <ZAxis dataKey="z" range={[50, 500]} name={yAxisFields[2]} />}
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    return (
                         <div className="bg-white p-3 border rounded-md shadow-md">
                           <p className="font-semibold mb-1 text-sm">{payload[0]?.payload?.name || "Tidak diketahui"}</p>
                           <div className="space-y-1">
@@ -653,24 +653,24 @@ export function ChartDisplay({
                               </div>
                             )}
                           </div>
-                        </div>
+                      </div>
                       );
-                    }
+                  }
                     return null;
-                  }}
-                />
+                }}
+              />
                 {/* <Legend formatter={safeLegendFormatter} /> */}
-                <Scatter
-                  name={`${yAxisFields[0]} vs ${yAxisFields[1]}`}
-                  data={scatterChartData}
-                  fill={COLORS[0]}
-                  shape="circle"
+              <Scatter
+                name={`${yAxisFields[0]} vs ${yAxisFields[1]}`}
+                data={scatterChartData}
+                fill={COLORS[0]}
+                shape="circle"
                   isAnimationActive={true}
                   animationDuration={1500}
                   animationEasing="ease-out"
-                />
-              </ScatterChart>
-            </ResponsiveContainer>
+              />
+            </ScatterChart>
+          </ResponsiveContainer>
             <TotalDataInfo data={scatterChartData} chartType={chartType} yAxisFields={yAxisFields} />
           </div>
         )}

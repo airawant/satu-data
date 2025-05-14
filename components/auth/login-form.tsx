@@ -44,7 +44,7 @@ export function LoginForm() {
   // Get the redirectTo parameter if it exists
   const redirectTo = searchParams.get('redirectTo')
     ? decodeURIComponent(searchParams.get('redirectTo') || '')
-    : '/dashboard';
+    : '/admin/dashboard';
 
   // Pastikan selalu ada parameter bypass
   useEffect(() => {
@@ -112,7 +112,7 @@ export function LoginForm() {
   useEffect(() => {
     // Jika ada user langsung redirect agresif (paksa)
     if (user && user.id && !isRedirecting) {
-      const destination = redirectTo ? `${redirectTo}?bypass=true` : "/dashboard?bypass=true";
+      const destination = redirectTo ? `${redirectTo}?bypass=true` : "/admin/dashboard?bypass=true";
       console.log('Emergency direct redirect to', destination);
 
       // Gunakan timeout kecil untuk menghindari race condition
@@ -135,7 +135,7 @@ export function LoginForm() {
         // Tambahkan timeout untuk memberi waktu pada browser
         redirectTimerRef.current = setTimeout(() => {
           if (mountedRef.current) {
-            const destination = redirectTo ? `${redirectTo}?bypass=true` : "/dashboard?bypass=true";
+            const destination = redirectTo ? `${redirectTo}?bypass=true` : "/admin/dashboard?bypass=true";
             console.log('Executing redirect to', destination);
             window.location.href = destination;
           }
@@ -152,7 +152,7 @@ export function LoginForm() {
         if (mountedRef.current) {
           console.log('Force redirecting after timeout');
           redirectAttemptRef.current += 1;
-          const destination = redirectTo ? `${redirectTo}?bypass=true` : "/dashboard?bypass=true";
+          const destination = redirectTo ? `${redirectTo}?bypass=true` : "/admin/dashboard?bypass=true";
           window.location.replace(destination);
         }
       }, 3000); // 3 detik timeout
@@ -199,7 +199,7 @@ export function LoginForm() {
   // Fungsi untuk paksa ke halaman admin
   const handleForceAdmin = () => {
     console.log("Force navigating to admin page...");
-    const destination = redirectTo ? `${redirectTo}?bypass=true` : "/dashboard?bypass=true";
+    const destination = redirectTo ? `${redirectTo}?bypass=true` : "/admin/dashboard?bypass=true";
     window.location.href = destination;
   }
 
@@ -280,7 +280,7 @@ export function LoginForm() {
         // Langsung redirect tanpa menunggu state update - pastikan ada bypass=true
         setTimeout(() => {
           if (mountedRef.current) {
-            const destination = redirectTo ? `${redirectTo}?bypass=true` : "/dashboard?bypass=true";
+            const destination = redirectTo ? `${redirectTo}?bypass=true` : "/admin/dashboard?bypass=true";
             window.location.replace(destination);
           }
         }, 100);

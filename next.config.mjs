@@ -13,7 +13,8 @@ const nextConfig = {
   experimental: {
     // Hindari konflik dengan transpilePackages
     // serverComponentsExternalPackages: ['recharts'],
-    missingSuspenseWithCSRBailout: false,
+    // Opsi missingSuspenseWithCSRBailout sudah tidak didukung lagi di Next.js terbaru
+    // dan telah menjadi perilaku default
   },
   // Menjamin recharts ditranspilasi dengan benar
   transpilePackages: ['recharts', 'recharts-scale', 'd3-scale', 'd3-shape', 'd3-path', 'd3-interpolate'],

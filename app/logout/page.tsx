@@ -52,7 +52,7 @@ export default function LogoutPage() {
   // Fungsi untuk kembali ke halaman sebelumnya
   const handleBack = () => {
     // Kembali ke dashboard alih-alih halaman sebelumnya
-    window.location.replace('/dashboard')
+    window.location.replace('/')
   }
 
   // Auto-logout ketika halaman dibuka

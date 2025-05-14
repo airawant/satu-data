@@ -61,13 +61,13 @@ export function UserNav() {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link href="/admin/upload-dataset" className="flex cursor-pointer">
+            <Link href="/admin/upload-dataset?bypass=true" className="flex cursor-pointer">
               <User className="mr-2 h-4 w-4" />
               <span>Panel Admin</span>
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href="/admin/settings" className="flex cursor-pointer">
+            <Link href="/admin/settings?bypass=true" className="flex cursor-pointer">
               <Settings className="mr-2 h-4 w-4" />
               <span>Pengaturan</span>
             </Link>

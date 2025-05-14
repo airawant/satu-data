@@ -2,7 +2,8 @@ import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export async function middleware(req: NextRequest) {
+// Ekspor middleware sebagai default untuk Next.js 15
+export default async function middleware(req: NextRequest) {
   // Jika ada query parameter bypass, biarkan navigasi berjalan normal
   if (req.nextUrl.searchParams.has('bypass')) {
     console.log('Bypass activated, allowing navigation to', req.nextUrl.pathname)
@@ -28,11 +29,11 @@ export async function middleware(req: NextRequest) {
 
     // Daftar rute yang dilindungi (memerlukan login)
     const protectedRoutes = [
-      '/dashboard',
       '/admin',
       '/admin/upload-dataset',
       '/admin/upload-infografis',
       '/admin/dynamic-table-config',
+      '/admin/dashboard',
       '/data-explorer' // Data-explorer hanya dapat diakses oleh admin yang login
     ]
 
@@ -81,6 +82,19 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(loginUrl)
     }
 
+    // Jika user memiliki session dan mengakses path admin, tapi tidak ada bypass parameter,
+    // redirect ke path yang sama dengan penambahan parameter bypass
+    if (session && req.nextUrl.pathname.startsWith('/admin/') && !req.nextUrl.searchParams.has('bypass')) {
+      console.log('Middleware adding bypass parameter to admin route for authenticated user')
+
+      // Buat URL baru dengan menambahkan parameter bypass=true
+      const adminUrl = new URL(req.nextUrl.pathname, req.url)
+      adminUrl.search = req.nextUrl.search
+      adminUrl.searchParams.set('bypass', 'true')
+
+      return NextResponse.redirect(adminUrl)
+    }
+
     // Tangani rute khusus dengan lebih baik
     if (req.nextUrl.pathname === '/charts' ||
         req.nextUrl.pathname === '/login' ||
@@ -88,7 +102,8 @@ export async function middleware(req: NextRequest) {
         req.nextUrl.pathname === '/admin/dynamic-table-config' ||
         req.nextUrl.pathname === '/admin' ||
         req.nextUrl.pathname === '/admin/upload-dataset' ||
-        req.nextUrl.pathname === '/admin/upload-infografis') {
+        req.nextUrl.pathname === '/admin/upload-infografis' ||
+        req.nextUrl.pathname === '/admin/dashboard') {
       // Pastikan bahwa rute bermasalah selalu dirender dengan stabil, menghindari error prerender
       return NextResponse.next();
     }
@@ -107,7 +122,6 @@ export const config = {
     '/admin/:path*',
     '/login',
     '/data-explorer',
-    '/dashboard',
     '/charts/:path*',
     '/query-builder'
   ],

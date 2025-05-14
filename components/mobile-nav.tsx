@@ -88,17 +88,17 @@ export function MobileNav() {
                 <div className="h-px w-full bg-border my-2"></div>
                 <p className="text-sm font-semibold text-muted-foreground mb-1">Menu Admin</p>
                 <Link
-                  href="/dashboard"
+                  href="/admin/dashboard?bypass=true"
                   className={cn(
                     "flex items-center text-lg font-medium transition-colors hover:text-primary",
-                    pathname === "/dashboard" ? "text-primary" : "text-muted-foreground",
+                    pathname === "/admin/dashboard" ? "text-primary" : "text-muted-foreground",
                   )}
                   onClick={() => setOpen(false)}
                 >
                   Dashboard
                 </Link>
                 <Link
-                  href="/data-explorer"
+                  href="/data-explorer?bypass=true"
                   className={cn(
                     "flex items-center text-lg font-medium transition-colors hover:text-primary",
                     pathname === "/data-explorer" ? "text-primary" : "text-muted-foreground",
