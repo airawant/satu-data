@@ -55,6 +55,7 @@ type CharacteristicValue = {
   variableId: string
   variableName: string
   type?: string
+  values?: string[] // Tambahan property values untuk mengatasi linter error
 }
 
 type RowTitleValue = {
@@ -62,6 +63,7 @@ type RowTitleValue = {
   name: string
   variableId: string
   variableName: string
+  values?: string[] // Tambahan property values untuk mengatasi linter error
 }
 
 // Tipe untuk kolom pivot tabel
@@ -241,7 +243,7 @@ export function QueryBuilderDataTable() {
   const handleConfigSelect = (config: TableConfigItem) => {
     setSelectedConfigId(config.id)
     setSelectedDatasetId(config.datasetId)
-    setSelectedTableConfigId(config.configId)
+    setSelectedTableConfigId(config.configId || "") // Tambahkan fallback ke string kosong jika configId undefined
   }
 
   // Ubah useEffect untuk menggunakan konfigurasi tabel yang dipilih
@@ -537,78 +539,398 @@ export function QueryBuilderDataTable() {
 
   // Handle characteristic selection
   const handleCharacteristicSelect = (characteristicId: string) => {
+    // Cek apakah ID sudah ada dalam seleksi
     if (selectedCharacteristics.includes(characteristicId)) {
-      setSelectedCharacteristics(selectedCharacteristics.filter((id) => id !== characteristicId))
+      // Jika sudah ada, hapus dari seleksi
+      setSelectedCharacteristics(selectedCharacteristics.filter((id) => id !== characteristicId));
+
+      // Reset state tabel jika ada
+      if (showTable) {
+        setShowTable(false);
+        setPivotTableData([]);
+        setPivotColumns([]);
+      }
     } else {
-      setSelectedCharacteristics([...selectedCharacteristics, characteristicId])
+      // Jika belum ada, tambahkan ke seleksi
+      setSelectedCharacteristics([...selectedCharacteristics, characteristicId]);
+
+      // Reset state tabel jika ada
+      if (showTable) {
+        setShowTable(false);
+        setPivotTableData([]);
+        setPivotColumns([]);
+      }
     }
   }
 
   // Handle row title selection
   const handleRowTitleSelect = (rowTitleId: string) => {
+    // Cek apakah ID sudah ada dalam seleksi
     if (selectedRowTitles.includes(rowTitleId)) {
-      setSelectedRowTitles(selectedRowTitles.filter((id) => id !== rowTitleId))
+      // Jika sudah ada, hapus dari seleksi
+      setSelectedRowTitles(selectedRowTitles.filter((id) => id !== rowTitleId));
+
+      // Reset state tabel jika ada
+      if (showTable) {
+        setShowTable(false);
+        setPivotTableData([]);
+        setPivotColumns([]);
+      }
     } else {
-      setSelectedRowTitles([...selectedRowTitles, rowTitleId])
+      // Jika belum ada, tambahkan ke seleksi
+      setSelectedRowTitles([...selectedRowTitles, rowTitleId]);
+
+      // Reset state tabel jika ada
+      if (showTable) {
+        setShowTable(false);
+        setPivotTableData([]);
+        setPivotColumns([]);
+      }
     }
   }
 
-  // Ubah generatePivotTableData untuk menggunakan konfigurasi tabel dari API dengan penanganan error yang lebih baik
-  const generatePivotTableData = () => {
-    if (!selectedDataset) return { data: [], columns: [] };
-
-    // Get data and filter
-    const yearVariable = selectedDataset.variables.find((v) => v.name.toLowerCase() === "tahun");
-    if (!yearVariable) return { data: [], columns: [] };
-
-    // Normalize dataset - handle both 'data' (old) and 'content' (new) property names
-    const dataArray = selectedDataset.content || (selectedDataset as any).data || [];
-
-    // Periksa jika dataArray valid (array dan tidak kosong)
-    if (!Array.isArray(dataArray) || dataArray.length === 0) {
-      console.warn("Dataset does not contain any data");
-      return { data: [], columns: [] };
+  // Tambahkan fungsi untuk memastikan pengguna telah memilih nilai dengan benar
+  const validateSelections = () => {
+    // Validasi pilihan judul baris
+    if (selectedRowTitles.length === 0) {
+      toast({
+        title: "Perhatian",
+        description: "Silakan pilih minimal satu Judul Baris",
+        variant: "destructive",
+      });
+      return false;
     }
 
-    // Ambil konfigurasi tabel jika ada selectedTableConfigId
-    const fetchTableConfigAndGenerateData = async () => {
-      try {
-        // Jika ada selectedTableConfigId, ambil dari API
-        if (selectedTableConfigId) {
-          const response = await fetch(`/api/table-configs/${selectedTableConfigId}`);
-          if (!response.ok) {
-            throw new Error(`Error fetching table config: ${response.statusText}`);
-          }
+    // Validasi pilihan karakteristik
+    if (selectedCharacteristics.length === 0) {
+      toast({
+        title: "Perhatian",
+        description: "Silakan pilih minimal satu Karakteristik",
+        variant: "destructive",
+      });
+      return false;
+    }
 
-          const tableConfig = await response.json();
-          console.log("Fetched table config:", tableConfig);
+    // Validasi pilihan tahun
+    if (selectedYears.length === 0) {
+      toast({
+        title: "Perhatian",
+        description: "Silakan pilih minimal satu Tahun",
+        variant: "destructive",
+      });
+      return false;
+    }
 
-          if (!tableConfig) {
-            console.error("Empty table config response");
-            return generatePivotTableLegacy(dataArray, yearVariable);
-          }
+    // Validasi nilai yang dipilih tersedia dalam dataset
+    if (!selectedDataset || !selectedDataset.content || (selectedDataset.content as any[]).length === 0) {
+      toast({
+        title: "Data Kosong",
+        description: "Dataset tidak memiliki data. Pilih dataset lain.",
+        variant: "destructive",
+      });
+      return false;
+    }
 
-          // Gunakan konfigurasi tabel untuk menghasilkan data pivot
-          return generatePivotTableWithConfig(tableConfig, dataArray, yearVariable);
+    // Verifikasi bahwa kombinasi data menghasilkan baris data yang valid
+    const dataArray = selectedDataset.content || (selectedDataset as any).data || [];
+    const yearVariable = selectedDataset.variables.find((v) => v.name.toLowerCase() === "tahun");
+
+    if (!yearVariable) {
+      toast({
+        title: "Perhatian",
+        description: "Dataset tidak memiliki variabel tahun yang valid.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    // Filter data berdasarkan tahun yang dipilih
+    const filteredByYear = dataArray.filter((row) =>
+      row &&
+      row[yearVariable.name] !== undefined &&
+      row[yearVariable.name] !== null &&
+      row[yearVariable.name] !== "" &&
+      selectedYears.includes(String(row[yearVariable.name])) &&
+      String(row[yearVariable.name]) !== "null" &&
+      String(row[yearVariable.name]) !== "undefined"
+    );
+
+    if (filteredByYear.length === 0) {
+      toast({
+        title: "Perhatian",
+        description: "Tidak ada data yang tersedia untuk tahun yang dipilih.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    // Periksa apakah setidaknya satu karakteristik memiliki nilai
+    const hasCharacteristicValues = selectedCharacteristics.some(charId => {
+      // Cari karakteristik berdasarkan ID
+      const characteristic = availableCharacteristics.find(c => c.id === charId);
+      return !!characteristic; // Pastikan karakteristik ditemukan
+    });
+
+    if (!hasCharacteristicValues) {
+      toast({
+        title: "Perhatian",
+        description: "Tidak ada nilai karakteristik yang tersedia untuk pilihan yang dipilih. Silakan pilih karakteristik lain.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    // Periksa apakah setidaknya satu judul baris memiliki nilai
+    const hasRowTitleValues = selectedRowTitles.some(rowId => {
+      // Cari judul baris berdasarkan ID
+      const rowTitle = availableRowTitles.find(r => r.id === rowId);
+      return !!rowTitle; // Pastikan judul baris ditemukan
+    });
+
+    if (!hasRowTitleValues) {
+      toast({
+        title: "Perhatian",
+        description: "Tidak ada nilai judul baris yang tersedia untuk pilihan yang dipilih. Silakan pilih judul baris lain.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    // Verifikasi lebih lanjut bahwa ada data yang dapat ditampilkan
+    // berdasarkan kombinasi pilihan karakteristik dan judul baris
+    let hasMatchingData = false;
+    const selectedCharacteristicNames = new Set();
+    const selectedRowTitleNames = new Set();
+
+    // Kumpulkan nama variabel karakteristik dan judul baris yang dipilih
+    availableCharacteristics.forEach(char => {
+      if (selectedCharacteristics.includes(char.id)) {
+        selectedCharacteristicNames.add(char.variableName);
+      }
+    });
+
+    availableRowTitles.forEach(row => {
+      if (selectedRowTitles.includes(row.id)) {
+        selectedRowTitleNames.add(row.variableName);
+      }
+    });
+
+    // Verifikasi setidaknya satu baris memiliki data untuk semua variabel yang dipilih
+    for (const row of filteredByYear) {
+      let rowMatches = true;
+
+      // Verifikasi karakteristik
+      for (const charName of selectedCharacteristicNames) {
+        if (row[charName] === undefined || row[charName] === null || row[charName] === "" ||
+            String(row[charName]) === "null" || String(row[charName]) === "undefined") {
+          rowMatches = false;
+          break;
         }
-      } catch (error) {
-        console.error('Error fetching table config for pivot table:', error);
       }
 
-      // Jika tidak ada selectedTableConfigId atau terjadi error, gunakan cara lama
-      console.log("Falling back to legacy pivot table generation");
-      return generatePivotTableLegacy(dataArray, yearVariable);
-    };
+      if (!rowMatches) continue;
 
-    return fetchTableConfigAndGenerateData();
+      // Verifikasi judul baris
+      for (const rowName of selectedRowTitleNames) {
+        if (row[rowName] === undefined || row[rowName] === null || row[rowName] === "" ||
+            String(row[rowName]) === "null" || String(row[rowName]) === "undefined") {
+          rowMatches = false;
+          break;
+        }
+      }
+
+      if (rowMatches) {
+        hasMatchingData = true;
+        break;
+      }
+    }
+
+    if (!hasMatchingData) {
+      toast({
+        title: "Perhatian",
+        description: "Tidak ada data yang tersedia untuk kombinasi tahun, karakteristik, dan judul baris yang dipilih.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return true;
+  }
+
+  // Tambahkan efek untuk menangani ketika konfigurasi tabel berubah
+  useEffect(() => {
+    // Ketika pengguna memilih kembali nilai setelah reset
+    if (selectedDataset && selectedRowTitles.length > 0 && selectedCharacteristics.length > 0 && selectedYears.length > 0) {
+      // Clear data tabel lama
+      setPivotTableData([]);
+      setPivotColumns([]);
+      setShowTable(false);
+
+      // Hapus pemanggilan setSelectedData karena ini mengakibatkan "Data Terpilih" muncul
+      // tanpa perlu klik tombol "Tambah"
+
+      console.log("Data selection updated after configuration change:", {
+        years: selectedYears,
+        characteristics: selectedCharacteristics,
+        rowTitles: selectedRowTitles
+      });
+    }
+  }, [selectedRowTitles, selectedCharacteristics, selectedYears, selectedDataset]);
+
+  // Ubah cara handleAddSelection untuk validasi ulang data
+  const handleAddSelection = () => {
+    // Validasi pilihan terlebih dahulu
+    if (!validateSelections()) {
+      return;
+    }
+
+    // Log untuk debugging
+    console.log("Adding selection with values:", {
+      years: selectedYears,
+      yearDerivatives: selectedYearDerivatives,
+      characteristics: selectedCharacteristics,
+      rowTitles: selectedRowTitles,
+    });
+
+    // Validasi dataset kosong dipindahkan ke validateSelections()
+
+    setSelectedData({
+      years: selectedYears,
+      yearDerivatives: selectedYearDerivatives,
+      characteristics: selectedCharacteristics,
+      rowTitles: selectedRowTitles,
+    });
+
+    toast({
+      title: "Data Terpilih",
+      description: "Data telah ditambahkan ke daftar pilihan. Klik 'Submit' untuk menampilkan tabel.",
+    });
+  }
+
+  // Ubah fungsi handleReset untuk melakukan reset lebih menyeluruh
+  const handleReset = () => {
+    console.log("Resetting all selections...");
+
+    // Simpan dataset terlebih dahulu
+    const currentDataset = selectedDataset;
+    const currentTableConfigId = selectedTableConfigId;
+
+    // Reset semua pilihan dan data
+    setSelectedYears([])
+    setSelectedYearDerivatives([])
+    setSelectedCharacteristics([])
+    setSelectedRowTitles([])
+    setSelectedData(null)
+    setTableData([])
+    setPivotTableData([])
+    setPivotColumns([])
+    setShowTable(false)
+
+    // Delay reload untuk memastikan state sudah ter-reset
+    setTimeout(() => {
+      // Jangan reset dataset yang dipilih
+      if (currentDataset) {
+        console.log("Reloading dataset after reset:", currentDataset.id);
+
+        // Ambil ulang data karakteristik dan judul baris
+        try {
+          if (currentTableConfigId) {
+            console.log("Using table config ID:", currentTableConfigId);
+            // Jika ada konfigurasi tabel, gunakan API
+            fetch(`/api/table-configs/${currentTableConfigId}`)
+              .then(response => {
+          if (!response.ok) {
+            throw new Error(`Error fetching table config: ${response.statusText}`);
+                }
+                return response.json();
+              })
+              .then(tableConfig => {
+                if (tableConfig) {
+                  console.log("Re-processing data with table config:", tableConfig);
+                  processDataWithTableConfig(tableConfig);
+                } else {
+                  console.warn("Empty table config, falling back to legacy mode");
+                  processDataWithLegacyConfig();
+                }
+              })
+              .catch(error => {
+                console.error('Error fetching table config after reset:', error);
+                processDataWithLegacyConfig();
+              });
+          } else {
+            console.log("Falling back to legacy config method after reset");
+            processDataWithLegacyConfig();
+          }
+
+          // Tampilkan pesan konfirmasi reset
+          toast({
+            title: "Reset Berhasil",
+            description: "Semua pilihan telah direset. Silakan pilih karakteristik dan judul baris lagi.",
+          });
+        } catch (error) {
+          console.error("Error during reset:", error);
+          toast({
+            title: "Error",
+            description: "Terjadi kesalahan saat mereset pilihan. Silakan muat ulang halaman.",
+            variant: "destructive",
+          });
+        }
+      }
+    }, 100);
+  }
+
+  // Tambahkan fungsi untuk menyegarkan data
+  const regenerateTableData = async () => {
+    if (!selectedDataset) return;
+
+    console.log("Regenerating table data...");
+    console.log("Selected Years:", selectedYears);
+    console.log("Selected Characteristics:", selectedCharacteristics);
+    console.log("Selected Row Titles:", selectedRowTitles);
+
+    // Kosongkan data tabel yang ada
+    setPivotTableData([]);
+    setPivotColumns([]);
+
+    // Jika tidak ada pilihan yang cukup, hentikan
+    if (selectedYears.length === 0 || selectedCharacteristics.length === 0 || selectedRowTitles.length === 0) {
+      console.log("Not enough selections to generate table");
+        return;
+      }
+
+    try {
+      // Ambil konfigurasi tabel kembali jika perlu
+      if (selectedTableConfigId) {
+        await fetchSelectedTableConfig();
+      }
+
+      // Hapus pemanggilan setSelectedData karena ini mengakibatkan "Data Terpilih" muncul
+      // tanpa perlu klik tombol "Tambah"
+      } catch (error) {
+      console.error("Error regenerating table data:", error);
+    }
   };
 
-  // Fungsi untuk menghasilkan data pivot tabel dengan konfigurasi dari API dengan penanganan error yang lebih baik
+  // Tambahkan efek untuk menyegarkan data saat pilihan berubah
+  useEffect(() => {
+    // Jangan jalankan saat pertama kali render atau tidak ada dataset
+    if (!selectedDataset) return;
+
+    // Jika sudah ada data yang ditampilkan dan kemudian pilihan berubah
+    if (showTable) {
+      // Sembunyikan tabel saat ini karena data akan berubah
+      setShowTable(false);
+    }
+  }, [selectedYears, selectedCharacteristics, selectedRowTitles]);
+
+  // Fungsi untuk menghasilkan data pivot tabel dengan konfigurasi dari API
   const generatePivotTableWithConfig = (
     tableConfig: any,
     dataArray: any[],
     yearVariable: DatasetVariable
   ) => {
+    console.log("Generating pivot table with config:", tableConfig);
+
     // Periksa konfigurasi tabel valid
     if (!tableConfig) {
       console.error("Invalid table config");
@@ -647,6 +969,23 @@ export function QueryBuilderDataTable() {
       return { data: [], columns: [] };
     }
 
+    // Membuat pemetaan antara ID judul baris yang dipilih dan nilai aktualnya
+    const selectedRowTitleMap = new Map<string, boolean>();
+    selectedRowTitles.forEach(selectedId => {
+      selectedRowTitleMap.set(selectedId, true);
+    });
+
+    // Membuat array dengan nama variabel judul baris yang sudah dipilih
+    const selectedRowVariableNames = selectedRowTitles
+      .filter(id => id.includes('_'))
+      .map(id => {
+        const parts = id.split('_');
+        const variableId = parts[0];
+        const variable = selectedDataset?.variables.find(v => v.id === variableId);
+        return variable?.name;
+      })
+      .filter(Boolean) as string[];
+
     const rowTitlesByVariable: Record<string, RowTitleValue[]> = {};
     rowTitlesByVariable[rowVariable.name] = [];
 
@@ -660,13 +999,35 @@ export function QueryBuilderDataTable() {
 
     // Format row title values
     Array.from(uniqueRowValues).sort().forEach((value, index) => {
+      const rowTitleId = `${rowVariable.id}_value_${index}`;
+
+      // Periksa apakah nilai judul baris ini dipilih pengguna
+      // Jika tidak ada nilai judul baris yang dipilih secara spesifik, tampilkan semua nilai untuk variabel yang dipilih
+      const specificValueSelected = selectedRowTitleMap.has(rowTitleId);
+      const isVariableSelected = selectedRowVariableNames.includes(rowVariable.name) ||
+                               selectedRowTitles.includes(rowVariable.name);
+      const showAllValues = isVariableSelected && selectedRowTitles.filter(id => id.startsWith(`${rowVariable.id}_value_`)).length === 0;
+
+      if (specificValueSelected || showAllValues) {
       rowTitlesByVariable[rowVariable.name].push({
-        id: `${rowVariable.id}_value_${index}`,
+          id: rowTitleId,
         name: value,
         variableId: rowVariable.id,
         variableName: rowVariable.name,
       });
+      }
     });
+
+    // Log untuk debugging
+    console.log("Selected row titles:", selectedRowTitles);
+    console.log("Row title values after filtering:", rowTitlesByVariable);
+
+    // Periksa apakah ada judul baris yang ditemukan
+    if (Object.keys(rowTitlesByVariable).length === 0 ||
+        Object.values(rowTitlesByVariable).every(values => values.length === 0)) {
+      console.warn("No row title values found in filtered data");
+      return { data: [], columns: [] };
+    }
 
     // Buat struktur data untuk karakteristik dari konfigurasi
     const characteristicFields = Array.isArray(tableConfig.characteristic_fields) ?
@@ -682,7 +1043,33 @@ export function QueryBuilderDataTable() {
 
     const characteristicsByVariable: Record<string, CharacteristicValue[]> = {};
 
+    // Membuat pemetaan antara ID karakteristik yang dipilih dan nilai aktualnya
+    const selectedCharacteristicMap = new Map<string, boolean>();
+    selectedCharacteristics.forEach(selectedId => {
+      selectedCharacteristicMap.set(selectedId, true);
+    });
+
+    // Membuat array dengan nama variabel yang sudah dipilih
+    const selectedVariableNames = selectedCharacteristics
+      .filter(id => id.includes('_'))
+      .map(id => {
+        const parts = id.split('_');
+        const variableId = parts[0];
+        const variable = characteristicVariables.find(v => v.id === variableId);
+        return variable?.name;
+      })
+      .filter(Boolean) as string[];
+
     characteristicVariables.forEach((variable) => {
+      // Periksa apakah variabel ini dipilih pengguna
+      const isVariableSelected = selectedVariableNames.includes(variable.name) ||
+                                 selectedCharacteristics.includes(variable.name);
+
+      if (!isVariableSelected) {
+        console.log(`Skipping unselected characteristic variable: ${variable.name}`);
+        return; // Skip variabel yang tidak dipilih
+      }
+
       characteristicsByVariable[variable.name] = [];
 
       // Get unique characteristic values
@@ -693,14 +1080,18 @@ export function QueryBuilderDataTable() {
         }
       });
 
-      // Format characteristic values - hanya karakteristik yang dipilih oleh pengguna
+      // Format characteristic values
       Array.from(uniqueValues).sort().forEach((value, index) => {
-        // Hanya tambahkan jika nilai karakteristik dipilih pengguna
-        // Atau jika selectedCharacteristics berisi variableName
-        if (selectedCharacteristics.includes(`${variable.id}_value_${index}`) ||
-            selectedCharacteristics.includes(variable.name)) {
+        const characteristicId = `${variable.id}_value_${index}`;
+
+        // Periksa apakah nilai karakteristik ini dipilih pengguna
+        // Jika tidak ada nilai karakteristik yang dipilih secara spesifik, tampilkan semua nilai untuk variabel yang dipilih
+        const specificValueSelected = selectedCharacteristicMap.has(characteristicId);
+        const showAllValues = isVariableSelected && selectedCharacteristics.filter(id => id.startsWith(`${variable.id}_value_`)).length === 0;
+
+        if (specificValueSelected || showAllValues) {
           characteristicsByVariable[variable.name].push({
-            id: `${variable.id}_value_${index}`,
+            id: characteristicId,
             name: value,
             variableId: variable.id,
             variableName: variable.name,
@@ -710,9 +1101,14 @@ export function QueryBuilderDataTable() {
       });
     });
 
+    // Log untuk debugging
+    console.log("Selected characteristics:", selectedCharacteristics);
+    console.log("Characteristic values after filtering:", characteristicsByVariable);
+
     // Periksa apakah ada karakteristik yang ditemukan
     if (Object.keys(characteristicsByVariable).length === 0) {
       console.warn("No characteristic values found in filtered data");
+      return { data: [], columns: [] };
     }
 
     // Create pivot table columns
@@ -738,6 +1134,7 @@ export function QueryBuilderDataTable() {
         const characteristicValues = characteristicsByVariable[variableName];
 
         if (!characteristicValues || characteristicValues.length === 0) {
+          console.log(`No selected characteristic values for ${variableName}, skipping`);
           return; // Skip if no characteristic values
         }
 
@@ -847,6 +1244,9 @@ export function QueryBuilderDataTable() {
 
         let cellValue = 0;
 
+        // Tambahkan log debugging
+        console.log(`Checking ${year} - ${characteristicName} - ${characteristicValue}: ${filteredRows.length} rows matched`);
+
         if (aggregationMethod === "count") {
           // Count rows
           cellValue = filteredRows.length;
@@ -939,11 +1339,14 @@ export function QueryBuilderDataTable() {
       });
     }
 
+    console.log("Generated pivot data:", pivotData.length, "rows with", pivotColumns.length, "columns");
     return { data: pivotData, columns: pivotColumns };
   };
 
   // Fungsi untuk menghasilkan data pivot tabel dengan cara lama (backward compatibility)
   const generatePivotTableLegacy = (dataArray: any[], yearVariable: DatasetVariable) => {
+    console.log("Generating pivot table with legacy mode");
+
     // Filter data based on selected years - pastikan setiap row valid sebelum memfilter
     const filteredData = dataArray.filter((row) =>
       row && // pastikan row tidak null/undefined
@@ -963,14 +1366,57 @@ export function QueryBuilderDataTable() {
     // Get aggregation method from dataset configuration
     const aggregationMethod = selectedDataset?.tableConfig?.aggregationMethod || "sum";
 
+    // Membuat pemetaan antara ID judul baris yang dipilih dan nilai aktualnya
+    const selectedRowTitleMap = new Map<string, boolean>();
+    selectedRowTitles.forEach(selectedId => {
+      selectedRowTitleMap.set(selectedId, true);
+    });
+
+    // Membuat array dengan nama variabel judul baris yang sudah dipilih
+    const selectedRowVariableNames = selectedRowTitles
+      .filter(id => id.includes('_'))
+      .map(id => {
+        const variable = availableRowTitles.find(r => r.id === id);
+        return variable?.variableName;
+      })
+      .filter(Boolean) as string[];
+
     // Get row titles by variable
     const rowTitlesByVariable: Record<string, RowTitleValue[]> = {};
-    selectedRowTitles.forEach((variableName) => {
-      const rowValues = availableRowTitles.filter((row) => row.variableName === variableName);
-      if (rowValues.length > 0) {
-        rowTitlesByVariable[variableName] = rowValues;
+    selectedRowTitles.forEach((rowTitleId) => {
+      // Periksa apakah ini adalah ID variabel atau ID nilai judul baris
+      if (rowTitleId.includes('_value_')) {
+        // Ini adalah ID nilai judul baris spesifik
+        const rowTitleValue = availableRowTitles.find(r => r.id === rowTitleId);
+        if (rowTitleValue) {
+          const varName = rowTitleValue.variableName;
+          if (!rowTitlesByVariable[varName]) {
+            rowTitlesByVariable[varName] = [];
+          }
+          rowTitlesByVariable[varName].push(rowTitleValue);
+        }
+      } else {
+        // Ini adalah nama variabel - ambil semua nilai untuk variabel ini
+        const variableValues = availableRowTitles.filter(r =>
+          r.variableName === rowTitleId || r.variableId === rowTitleId);
+
+        if (variableValues.length > 0) {
+          const varName = variableValues[0].variableName;
+          rowTitlesByVariable[varName] = variableValues;
+        } else {
+          // Bisa jadi ini adalah variableId daripada variableName
+          const matchingValues = availableRowTitles.filter(r => r.variableId === rowTitleId);
+          if (matchingValues.length > 0) {
+            const varName = matchingValues[0].variableName;
+            rowTitlesByVariable[varName] = matchingValues;
+          }
+        }
       }
     });
+
+    // Log untuk debugging
+    console.log("Selected row titles (legacy):", selectedRowTitles);
+    console.log("Row title values after filtering (legacy):", rowTitlesByVariable);
 
     if (Object.keys(rowTitlesByVariable).length === 0) {
       console.warn("No row titles selected in legacy mode");
@@ -979,12 +1425,55 @@ export function QueryBuilderDataTable() {
 
     // Get characteristic values by variable
     const characteristicsByVariable: Record<string, CharacteristicValue[]> = {};
-    selectedCharacteristics.forEach((variableName) => {
-      const characteristicValues = availableCharacteristics.filter((c) => c.variableName === variableName);
-      if (characteristicValues.length > 0) {
-        characteristicsByVariable[variableName] = characteristicValues;
+
+    // Membuat pemetaan antara ID karakteristik yang dipilih dan nilai aktualnya
+    const selectedCharacteristicMap = new Map<string, boolean>();
+    selectedCharacteristics.forEach(selectedId => {
+      selectedCharacteristicMap.set(selectedId, true);
+    });
+
+    // Membuat array dengan nama variabel yang sudah dipilih
+    const selectedVariableNames = selectedCharacteristics
+      .filter(id => id.includes('_'))
+      .map(id => {
+        const variable = availableCharacteristics.find(c => c.id === id);
+        return variable?.variableName;
+      })
+      .filter(Boolean) as string[];
+
+    selectedCharacteristics.forEach((characteristicId) => {
+      // Periksa apakah ini adalah ID variabel atau ID nilai karakteristik
+      if (characteristicId.includes('_value_')) {
+        // Ini adalah ID nilai karakteristik spesifik
+        const characteristicValue = availableCharacteristics.find(c => c.id === characteristicId);
+        if (characteristicValue) {
+          const varName = characteristicValue.variableName;
+          if (!characteristicsByVariable[varName]) {
+            characteristicsByVariable[varName] = [];
+          }
+          characteristicsByVariable[varName].push(characteristicValue);
+        }
+      } else {
+        // Ini adalah nama variabel - ambil semua nilai untuk variabel ini
+        const variableValues = availableCharacteristics.filter(c =>
+          c.variableName === characteristicId || c.variableId === characteristicId);
+
+        if (variableValues.length > 0) {
+          characteristicsByVariable[characteristicId] = variableValues;
+        } else {
+          // Bisa jadi ini adalah variableId daripada variableName
+          const matchingValues = availableCharacteristics.filter(c => c.variableId === characteristicId);
+          if (matchingValues.length > 0) {
+            const varName = matchingValues[0].variableName;
+            characteristicsByVariable[varName] = matchingValues;
+          }
+        }
       }
     });
+
+    // Log untuk debugging
+    console.log("Selected characteristics (legacy):", selectedCharacteristics);
+    console.log("Characteristic values after filtering (legacy):", characteristicsByVariable);
 
     // Create pivot table columns
     const pivotColumns: PivotColumn[] = [];
@@ -1007,6 +1496,11 @@ export function QueryBuilderDataTable() {
 
       Object.keys(characteristicsByVariable).forEach((variableName) => {
         const characteristicValues = characteristicsByVariable[variableName];
+
+        if (!characteristicValues || characteristicValues.length === 0) {
+          console.log(`No selected characteristic values for ${variableName} in legacy mode, skipping`);
+          return; // Skip if no characteristic values
+        }
 
         characteristicValues.forEach((characteristic) => {
           characteristicValueColumns.push({
@@ -1118,6 +1612,9 @@ export function QueryBuilderDataTable() {
                  String(characteristicVal) === characteristicValue;
         });
 
+        // Tambahkan log debugging
+        console.log(`Legacy mode - Checking ${year} - ${characteristicName} - ${characteristicValue}: ${filteredRows.length} rows matched`);
+
         let cellValue = 0;
 
         if (aggregationMethod === "count") {
@@ -1212,27 +1709,81 @@ export function QueryBuilderDataTable() {
       });
     }
 
+    console.log("Generated pivot data (legacy):", pivotData.length, "rows with", pivotColumns.length, "columns");
     return { data: pivotData, columns: pivotColumns };
   };
 
-  // Tambahkan fungsi untuk menambahkan data yang dipilih
-  const handleAddSelection = () => {
-    setSelectedData({
-      years: selectedYears,
-      yearDerivatives: selectedYearDerivatives,
-      characteristics: selectedCharacteristics,
-      rowTitles: selectedRowTitles,
-    })
+  // Ubah fungsi untuk menghasilkan data pivot tabel
+  const generatePivotTableData = () => {
+    if (!selectedDataset) {
+      console.error("Cannot generate pivot table: No dataset selected");
+      return { data: [], columns: [] };
+    }
 
-    toast({
-      title: "Data Terpilih",
-      description: "Data telah ditambahkan ke daftar pilihan. Klik 'Submit' untuk menampilkan tabel.",
-    })
-  }
+    // Get data and filter
+    const yearVariable = selectedDataset.variables.find((v) => v.name.toLowerCase() === "tahun");
+    if (!yearVariable) {
+      console.error("Cannot generate pivot table: No year variable found");
+      return { data: [], columns: [] };
+    }
 
+    // Normalize dataset - handle both 'data' (old) and 'content' (new) property names
+    const dataArray = selectedDataset.content || (selectedDataset as any).data || [];
+
+    // Log diagnostic information
+    console.log("Generating pivot table with data array length:", dataArray.length);
+    console.log("Selected years:", selectedYears);
+    console.log("Selected characteristics:", selectedCharacteristics);
+    console.log("Selected row titles:", selectedRowTitles);
+
+    // Periksa jika dataArray valid (array dan tidak kosong)
+    if (!Array.isArray(dataArray) || dataArray.length === 0) {
+      console.warn("Dataset does not contain any data");
+      return { data: [], columns: [] };
+    }
+
+    // Ambil konfigurasi tabel jika ada selectedTableConfigId
+    const fetchTableConfigAndGenerateData = async () => {
+      try {
+        // Jika ada selectedTableConfigId, ambil dari API
+        if (selectedTableConfigId) {
+          console.log("Fetching table config:", selectedTableConfigId);
+
+          const response = await fetch(`/api/table-configs/${selectedTableConfigId}`);
+          if (!response.ok) {
+            throw new Error(`Error fetching table config: ${response.statusText}`);
+          }
+
+          const tableConfig = await response.json();
+          console.log("Fetched table config:", tableConfig);
+
+          if (!tableConfig) {
+            console.error("Empty table config response");
+            return generatePivotTableLegacy(dataArray, yearVariable);
+          }
+
+          // Gunakan konfigurasi tabel untuk menghasilkan data pivot
+          return generatePivotTableWithConfig(tableConfig, dataArray, yearVariable);
+        }
+      } catch (error) {
+        console.error('Error fetching table config for pivot table:', error);
+      }
+
+      // Jika tidak ada selectedTableConfigId atau terjadi error, gunakan cara lama
+      console.log("Falling back to legacy pivot table generation");
+      return generatePivotTableLegacy(dataArray, yearVariable);
+    };
+
+    return fetchTableConfigAndGenerateData();
+  };
+
+  // Fungsi handleSubmit untuk memproses dan menampilkan data
   const handleSubmit = async () => {
     if (selectedData) {
       try {
+        console.log("Submitting selection to generate pivot table...");
+        console.log("Current selected data:", selectedData);
+
         // Tampilkan pesan loading
         toast({
           title: "Memproses Data",
@@ -1241,10 +1792,25 @@ export function QueryBuilderDataTable() {
 
         // Tunggu hingga hasil generatePivotTableData tersedia
         const result = await generatePivotTableData();
+        console.log("Generated pivot table result:", result);
 
         // Periksa apakah result berisi data dan columns
         if (result && typeof result === 'object') {
           const { data = [], columns = [] } = result;
+
+          if (data.length === 0 || columns.length === 0) {
+            console.warn("No data or columns in pivot table result");
+            toast({
+              title: "Tidak Ada Data",
+              description: "Tidak ada data yang sesuai dengan kriteria filter yang dipilih. Silakan pilih filter lain.",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          // Log first few rows for debugging
+          console.log("First few rows of pivot data:", data.slice(0, 3));
+          console.log("Columns:", columns);
 
           setPivotTableData(data);
           setPivotColumns(columns);
@@ -1271,17 +1837,22 @@ export function QueryBuilderDataTable() {
     }
   }
 
-  const handleReset = () => {
-    setSelectedYears([])
-    setSelectedYearDerivatives([])
-    setSelectedCharacteristics([])
-    setSelectedRowTitles([])
-    setSelectedData(null)
-    setTableData([])
-    setPivotTableData([])
-    setPivotColumns([])
-    setShowTable(false)
-  }
+  // Fungsi untuk memuat ulang konfigurasi tabel yang dipilih
+  const fetchSelectedTableConfig = async () => {
+    try {
+      const response = await fetch(`/api/table-configs/${selectedTableConfigId}`);
+      if (!response.ok) {
+        throw new Error(`Error fetching table config: ${response.statusText}`);
+      }
+
+      const tableConfig = await response.json();
+      processDataWithTableConfig(tableConfig);
+    } catch (error) {
+      console.error('Error fetching table config:', error);
+      // Jika gagal, gunakan cara lama
+      processDataWithLegacyConfig();
+    }
+  };
 
   const handleDownload = (type: string) => {
     toast({

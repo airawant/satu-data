@@ -769,20 +769,20 @@ function UploadInfografisContent() {
 // Wrapper dengan Suspense boundary
 export default function UploadInfografisPage() {
   return (
-    <Suspense fallback={
+          <Suspense fallback={
       <AdminLayout
         title="Upload Infografis"
         description="Unggah infografis baru atau edit infografis yang sudah ada"
       >
         <div className="container py-6 flex justify-center items-center min-h-[50vh]">
-          <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-3"></div>
             <p className="text-sm text-muted-foreground">Memuat halaman upload infografis...</p>
-          </div>
-        </div>
+              </div>
+            </div>
       </AdminLayout>
-    }>
+          }>
       <UploadInfografisContent />
-    </Suspense>
+          </Suspense>
   )
 }
