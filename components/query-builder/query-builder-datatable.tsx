@@ -515,7 +515,17 @@ export function QueryBuilderDataTable() {
     if (selectedCharacteristics.length === availableCharacteristics.length) {
       setSelectedCharacteristics([])
     } else {
-      setSelectedCharacteristics(availableCharacteristics.map((c) => c.id))
+      // Pilih semua ID karakteristik yang tersedia
+      const allCharacteristicIds = availableCharacteristics.map(c => c.id);
+      console.log("Memilih semua karakteristik:", allCharacteristicIds);
+      setSelectedCharacteristics(allCharacteristicIds);
+    }
+
+    // Reset tabel jika sudah ditampilkan
+    if (showTable) {
+      setShowTable(false);
+      setPivotTableData([]);
+      setPivotColumns([]);
     }
   }
 
@@ -524,7 +534,17 @@ export function QueryBuilderDataTable() {
     if (selectedRowTitles.length === availableRowTitles.length) {
       setSelectedRowTitles([])
     } else {
-      setSelectedRowTitles(availableRowTitles.map((r) => r.id))
+      // Pilih semua ID judul baris yang tersedia
+      const allRowTitleIds = availableRowTitles.map(r => r.id);
+      console.log("Memilih semua judul baris:", allRowTitleIds);
+      setSelectedRowTitles(allRowTitleIds);
+    }
+
+    // Reset tabel jika sudah ditampilkan
+    if (showTable) {
+      setShowTable(false);
+      setPivotTableData([]);
+      setPivotColumns([]);
     }
   }
 
@@ -552,7 +572,30 @@ export function QueryBuilderDataTable() {
       }
     } else {
       // Jika belum ada, tambahkan ke seleksi
-      setSelectedCharacteristics([...selectedCharacteristics, characteristicId]);
+
+      // Periksa apakah ini adalah karakteristik variabel atau nilai
+      const isVariableCharacteristic = !characteristicId.includes('_value_');
+
+      if (isVariableCharacteristic) {
+        // Jika ini adalah variabel (bukan nilai spesifik), pilih variabel dan hapus semua nilai spesifik dari variabel tersebut
+        const characteristic = availableCharacteristics.find(c => c.id === characteristicId);
+        if (characteristic) {
+          // Cari dan hapus semua nilai spesifik dari variabel yang sama dari seleksi yang ada
+          const variableName = characteristic.variableName;
+          const newSelectedCharacteristics = selectedCharacteristics.filter(id => {
+            const charValue = availableCharacteristics.find(c => c.id === id);
+            return !charValue || charValue.variableName !== variableName;
+          });
+
+          // Tambahkan variabel ke seleksi
+          setSelectedCharacteristics([...newSelectedCharacteristics, characteristicId]);
+        } else {
+          setSelectedCharacteristics([...selectedCharacteristics, characteristicId]);
+        }
+      } else {
+        // Ini adalah nilai spesifik, tambahkan ke seleksi
+        setSelectedCharacteristics([...selectedCharacteristics, characteristicId]);
+      }
 
       // Reset state tabel jika ada
       if (showTable) {
@@ -578,7 +621,30 @@ export function QueryBuilderDataTable() {
       }
     } else {
       // Jika belum ada, tambahkan ke seleksi
-      setSelectedRowTitles([...selectedRowTitles, rowTitleId]);
+
+      // Periksa apakah ini adalah judul baris variabel atau nilai
+      const isVariableRowTitle = !rowTitleId.includes('_value_');
+
+      if (isVariableRowTitle) {
+        // Jika ini adalah variabel (bukan nilai spesifik), pilih variabel dan hapus semua nilai spesifik dari variabel tersebut
+        const rowTitle = availableRowTitles.find(r => r.id === rowTitleId);
+        if (rowTitle) {
+          // Cari dan hapus semua nilai spesifik dari variabel yang sama dari seleksi yang ada
+          const variableName = rowTitle.variableName;
+          const newSelectedRowTitles = selectedRowTitles.filter(id => {
+            const rowValue = availableRowTitles.find(r => r.id === id);
+            return !rowValue || rowValue.variableName !== variableName;
+          });
+
+          // Tambahkan variabel ke seleksi
+          setSelectedRowTitles([...newSelectedRowTitles, rowTitleId]);
+        } else {
+          setSelectedRowTitles([...selectedRowTitles, rowTitleId]);
+        }
+      } else {
+        // Ini adalah nilai spesifik, tambahkan ke seleksi
+        setSelectedRowTitles([...selectedRowTitles, rowTitleId]);
+      }
 
       // Reset state tabel jika ada
       if (showTable) {
@@ -680,7 +746,7 @@ export function QueryBuilderDataTable() {
       return false;
     }
 
-    // Periksa apakah setidaknya satu judul baris memiliki nilai
+    // Verifikasi apakah setidaknya satu judul baris memiliki nilai
     const hasRowTitleValues = selectedRowTitles.some(rowId => {
       // Cari judul baris berdasarkan ID
       const rowTitle = availableRowTitles.find(r => r.id === rowId);
@@ -699,8 +765,8 @@ export function QueryBuilderDataTable() {
     // Verifikasi lebih lanjut bahwa ada data yang dapat ditampilkan
     // berdasarkan kombinasi pilihan karakteristik dan judul baris
     let hasMatchingData = false;
-    const selectedCharacteristicNames = new Set();
-    const selectedRowTitleNames = new Set();
+    const selectedCharacteristicNames = new Set<string>();
+    const selectedRowTitleNames = new Set<string>();
 
     // Kumpulkan nama variabel karakteristik dan judul baris yang dipilih
     availableCharacteristics.forEach(char => {
@@ -721,8 +787,10 @@ export function QueryBuilderDataTable() {
 
       // Verifikasi karakteristik
       for (const charName of selectedCharacteristicNames) {
-        if (row[charName] === undefined || row[charName] === null || row[charName] === "" ||
-            String(row[charName]) === "null" || String(row[charName]) === "undefined") {
+        // Gunakan type casting untuk mengatasi TypeScript error
+        const rowObj = row as Record<string, any>;
+        if (rowObj[charName] === undefined || rowObj[charName] === null || rowObj[charName] === "" ||
+            String(rowObj[charName]) === "null" || String(rowObj[charName]) === "undefined") {
           rowMatches = false;
           break;
         }
@@ -732,8 +800,10 @@ export function QueryBuilderDataTable() {
 
       // Verifikasi judul baris
       for (const rowName of selectedRowTitleNames) {
-        if (row[rowName] === undefined || row[rowName] === null || row[rowName] === "" ||
-            String(row[rowName]) === "null" || String(row[rowName]) === "undefined") {
+        // Gunakan type casting untuk mengatasi TypeScript error
+        const rowObj = row as Record<string, any>;
+        if (rowObj[rowName] === undefined || rowObj[rowName] === null || rowObj[rowName] === "" ||
+            String(rowObj[rowName]) === "null" || String(rowObj[rowName]) === "undefined") {
           rowMatches = false;
           break;
         }
@@ -950,6 +1020,11 @@ export function QueryBuilderDataTable() {
 
     if (filteredData.length === 0) {
       console.warn("No data after filtering by selected years");
+      toast({
+        title: "Tidak Ada Data",
+        description: "Tidak ada data yang sesuai dengan tahun yang dipilih.",
+        variant: "destructive",
+      });
       return { data: [], columns: [] };
     }
 
@@ -960,12 +1035,22 @@ export function QueryBuilderDataTable() {
     const rowField = tableConfig.row_field;
     if (!rowField) {
       console.error("No row field specified in table config");
+      toast({
+        title: "Konfigurasi Tidak Valid",
+        description: "Tidak ada field judul baris yang ditentukan dalam konfigurasi tabel.",
+        variant: "destructive",
+      });
       return { data: [], columns: [] };
     }
 
     const rowVariable = selectedDataset?.variables.find((v) => v.name === rowField);
     if (!rowVariable) {
       console.error(`Row field '${rowField}' not found in dataset variables`);
+      toast({
+        title: "Konfigurasi Tidak Valid",
+        description: `Field judul baris '${rowField}' tidak ditemukan dalam variabel dataset.`,
+        variant: "destructive",
+      });
       return { data: [], columns: [] };
     }
 
@@ -977,14 +1062,14 @@ export function QueryBuilderDataTable() {
 
     // Membuat array dengan nama variabel judul baris yang sudah dipilih
     const selectedRowVariableNames = selectedRowTitles
-      .filter(id => id.includes('_'))
+      .filter(id => !id.includes('_value_')) // Ambil hanya variabel, bukan nilai spesifik
       .map(id => {
-        const parts = id.split('_');
-        const variableId = parts[0];
-        const variable = selectedDataset?.variables.find(v => v.id === variableId);
+        const variable = selectedDataset?.variables.find(v => v.id === id || v.name === id);
         return variable?.name;
       })
       .filter(Boolean) as string[];
+
+    console.log("Selected row variable names:", selectedRowVariableNames);
 
     const rowTitlesByVariable: Record<string, RowTitleValue[]> = {};
     rowTitlesByVariable[rowVariable.name] = [];
@@ -1005,8 +1090,11 @@ export function QueryBuilderDataTable() {
       // Jika tidak ada nilai judul baris yang dipilih secara spesifik, tampilkan semua nilai untuk variabel yang dipilih
       const specificValueSelected = selectedRowTitleMap.has(rowTitleId);
       const isVariableSelected = selectedRowVariableNames.includes(rowVariable.name) ||
+                               selectedRowTitles.includes(rowVariable.id) ||
                                selectedRowTitles.includes(rowVariable.name);
-      const showAllValues = isVariableSelected && selectedRowTitles.filter(id => id.startsWith(`${rowVariable.id}_value_`)).length === 0;
+      const showAllValues = isVariableSelected &&
+                          selectedRowTitles.filter(id => id.includes('_value_') &&
+                                                id.startsWith(`${rowVariable.id}_value_`)).length === 0;
 
       if (specificValueSelected || showAllValues) {
       rowTitlesByVariable[rowVariable.name].push({
@@ -1026,6 +1114,11 @@ export function QueryBuilderDataTable() {
     if (Object.keys(rowTitlesByVariable).length === 0 ||
         Object.values(rowTitlesByVariable).every(values => values.length === 0)) {
       console.warn("No row title values found in filtered data");
+      toast({
+        title: "Tidak Ada Data",
+        description: "Tidak ada nilai judul baris yang cocok dengan filter yang dipilih.",
+        variant: "destructive",
+      });
       return { data: [], columns: [] };
     }
 
@@ -1035,6 +1128,11 @@ export function QueryBuilderDataTable() {
 
     if (characteristicFields.length === 0) {
       console.warn("No characteristic fields found in table config");
+      toast({
+        title: "Konfigurasi Tidak Lengkap",
+        description: "Tidak ada field karakteristik yang ditemukan dalam konfigurasi tabel.",
+        variant: "destructive",
+      });
     }
 
     const characteristicVariables = selectedDataset?.variables.filter((v) =>
@@ -1051,19 +1149,57 @@ export function QueryBuilderDataTable() {
 
     // Membuat array dengan nama variabel yang sudah dipilih
     const selectedVariableNames = selectedCharacteristics
-      .filter(id => id.includes('_'))
+      .filter(id => !id.includes('_value_')) // Ambil hanya variabel, bukan nilai spesifik
       .map(id => {
-        const parts = id.split('_');
-        const variableId = parts[0];
-        const variable = characteristicVariables.find(v => v.id === variableId);
+        const variable = characteristicVariables.find(v => v.id === id || v.name === id);
         return variable?.name;
       })
       .filter(Boolean) as string[];
 
+    console.log("Selected variable names:", selectedVariableNames);
+
+    // Jika tidak ada variabel karakteristik yang dipilih secara eksplisit, gunakan semua variabel yang tersedia
+    if (selectedVariableNames.length === 0 && characteristicVariables.length > 0) {
+      console.log("Tidak ada variabel karakteristik yang dipilih secara eksplisit, gunakan semua yang tersedia");
+
+      // Periksa apakah ada id yang mungkin cocok dengan format nilai karakteristik
+      const valueSelections = selectedCharacteristics.filter(id => id.includes('_value_'));
+
+      if (valueSelections.length > 0) {
+        // Ambil variabel dari karakteristik nilai yang dipilih
+        const valueVariables = new Set<string>();
+
+        for (const valueId of valueSelections) {
+          // Coba cocokkan dengan karakteristik dalam availableCharacteristics
+          const characteristic = availableCharacteristics.find(c => c.id === valueId);
+          if (characteristic?.variableName) {
+            valueVariables.add(characteristic.variableName);
+          }
+        }
+
+        // Tambahkan variabel tersebut ke selectedVariableNames
+        characteristicVariables
+          .filter(v => valueVariables.has(v.name))
+          .forEach(v => {
+            if (!selectedVariableNames.includes(v.name)) {
+              selectedVariableNames.push(v.name);
+            }
+          });
+      }
+
+      // Jika masih kosong, gunakan semua variabel karakteristik
+      if (selectedVariableNames.length === 0) {
+        characteristicVariables.forEach(v => {
+          selectedVariableNames.push(v.name);
+        });
+      }
+    }
+
     characteristicVariables.forEach((variable) => {
       // Periksa apakah variabel ini dipilih pengguna
       const isVariableSelected = selectedVariableNames.includes(variable.name) ||
-                                 selectedCharacteristics.includes(variable.name);
+                               selectedCharacteristics.includes(variable.id) ||
+                               selectedCharacteristics.includes(variable.name);
 
       if (!isVariableSelected) {
         console.log(`Skipping unselected characteristic variable: ${variable.name}`);
@@ -1080,6 +1216,20 @@ export function QueryBuilderDataTable() {
         }
       });
 
+      // Jika tidak ada nilai unik, tampilkan pesan warning tapi tetap lanjutkan
+      if (uniqueValues.size === 0) {
+        console.warn(`No unique values found for characteristic variable: ${variable.name}`);
+        // Tambahkan placeholder untuk menghindari array kosong
+        characteristicsByVariable[variable.name].push({
+          id: `${variable.id}_placeholder`,
+          name: "Tidak ada nilai",
+          variableId: variable.id,
+          variableName: variable.name,
+          type: variable.type === "measure" ? "measure" : "count",
+        });
+        return;
+      }
+
       // Format characteristic values
       Array.from(uniqueValues).sort().forEach((value, index) => {
         const characteristicId = `${variable.id}_value_${index}`;
@@ -1087,7 +1237,9 @@ export function QueryBuilderDataTable() {
         // Periksa apakah nilai karakteristik ini dipilih pengguna
         // Jika tidak ada nilai karakteristik yang dipilih secara spesifik, tampilkan semua nilai untuk variabel yang dipilih
         const specificValueSelected = selectedCharacteristicMap.has(characteristicId);
-        const showAllValues = isVariableSelected && selectedCharacteristics.filter(id => id.startsWith(`${variable.id}_value_`)).length === 0;
+        const showAllValues = isVariableSelected &&
+                            selectedCharacteristics.filter(id => id.includes('_value_') &&
+                                                      id.startsWith(`${variable.id}_value_`)).length === 0;
 
         if (specificValueSelected || showAllValues) {
           characteristicsByVariable[variable.name].push({
@@ -1099,6 +1251,20 @@ export function QueryBuilderDataTable() {
           });
         }
       });
+
+      // Jika setelah filter tidak ada nilai yang sesuai, tambahkan semua nilai
+      if (characteristicsByVariable[variable.name].length === 0) {
+        console.warn(`No matching values found for characteristic variable: ${variable.name}, adding all values`);
+        Array.from(uniqueValues).sort().forEach((value, index) => {
+          characteristicsByVariable[variable.name].push({
+            id: `${variable.id}_value_${index}`,
+            name: value,
+            variableId: variable.id,
+            variableName: variable.name,
+            type: variable.type === "measure" ? "measure" : "count",
+          });
+        });
+      }
     });
 
     // Log untuk debugging
@@ -1108,7 +1274,54 @@ export function QueryBuilderDataTable() {
     // Periksa apakah ada karakteristik yang ditemukan
     if (Object.keys(characteristicsByVariable).length === 0) {
       console.warn("No characteristic values found in filtered data");
-      return { data: [], columns: [] };
+
+      // Jika tidak ada karakteristik yang ditemukan, tetapi ada variabel karakteristik, coba gunakan semua
+      if (characteristicVariables.length > 0) {
+        console.log("Trying to use all available characteristic variables");
+
+        characteristicVariables.forEach((variable) => {
+          characteristicsByVariable[variable.name] = [];
+
+          // Get unique characteristic values
+          const uniqueValues = new Set<string>();
+          filteredData.forEach((row) => {
+            if (row && row[variable.name] !== undefined && row[variable.name] !== null && row[variable.name] !== "") {
+              uniqueValues.add(String(row[variable.name]));
+            }
+          });
+
+          // Format characteristic values
+          Array.from(uniqueValues).sort().forEach((value, index) => {
+            characteristicsByVariable[variable.name].push({
+              id: `${variable.id}_value_${index}`,
+              name: value,
+              variableId: variable.id,
+              variableName: variable.name,
+              type: variable.type === "measure" ? "measure" : "count",
+            });
+          });
+        });
+
+        console.log("After fallback to all characteristics:", characteristicsByVariable);
+
+        // Jika masih kosong, tampilkan pesan error
+        if (Object.keys(characteristicsByVariable).length === 0 ||
+            Object.values(characteristicsByVariable).every(values => values.length === 0)) {
+          toast({
+            title: "Tidak Ada Data",
+            description: "Tidak ada nilai karakteristik yang cocok dengan filter yang dipilih.",
+            variant: "destructive",
+          });
+          return { data: [], columns: [] };
+        }
+      } else {
+        toast({
+          title: "Tidak Ada Data",
+          description: "Tidak ada nilai karakteristik yang cocok dengan filter yang dipilih.",
+          variant: "destructive",
+        });
+        return { data: [], columns: [] };
+      }
     }
 
     // Create pivot table columns
@@ -1360,6 +1573,11 @@ export function QueryBuilderDataTable() {
 
     if (filteredData.length === 0) {
       console.warn("No data after filtering by selected years in legacy mode");
+      toast({
+        title: "Tidak Ada Data",
+        description: "Tidak ada data yang sesuai dengan tahun yang dipilih.",
+        variant: "destructive",
+      });
       return { data: [], columns: [] };
     }
 
@@ -1374,7 +1592,7 @@ export function QueryBuilderDataTable() {
 
     // Membuat array dengan nama variabel judul baris yang sudah dipilih
     const selectedRowVariableNames = selectedRowTitles
-      .filter(id => id.includes('_'))
+      .filter(id => !id.includes('_value_')) // Ambil hanya variabel, bukan nilai spesifik
       .map(id => {
         const variable = availableRowTitles.find(r => r.id === id);
         return variable?.variableName;
@@ -1418,9 +1636,30 @@ export function QueryBuilderDataTable() {
     console.log("Selected row titles (legacy):", selectedRowTitles);
     console.log("Row title values after filtering (legacy):", rowTitlesByVariable);
 
+    // Jika tidak ada judul baris yang ditemukan, coba gunakan semua yang tersedia
     if (Object.keys(rowTitlesByVariable).length === 0) {
-      console.warn("No row titles selected in legacy mode");
+      console.warn("No row titles selected in legacy mode, trying to use all available row titles");
+
+      // Pilih variabel judul baris pertama dan gunakan semua nilainya
+      const allRowVariables = [...new Set(availableRowTitles.map(r => r.variableName))];
+      if (allRowVariables.length > 0) {
+        const primaryRowVariable = allRowVariables[0];
+        const rowValues = availableRowTitles.filter(r => r.variableName === primaryRowVariable);
+        if (rowValues.length > 0) {
+          rowTitlesByVariable[primaryRowVariable] = rowValues;
+          console.log("Using all values for first row variable:", primaryRowVariable);
+        }
+      }
+
+      // Jika masih kosong, kembalikan error
+      if (Object.keys(rowTitlesByVariable).length === 0) {
+        toast({
+          title: "Tidak Ada Data",
+          description: "Tidak ada judul baris yang tersedia.",
+          variant: "destructive",
+        });
       return { data: [], columns: [] };
+      }
     }
 
     // Get characteristic values by variable
@@ -1434,12 +1673,25 @@ export function QueryBuilderDataTable() {
 
     // Membuat array dengan nama variabel yang sudah dipilih
     const selectedVariableNames = selectedCharacteristics
-      .filter(id => id.includes('_'))
+      .filter(id => !id.includes('_value_')) // Ambil hanya variabel, bukan nilai spesifik
       .map(id => {
         const variable = availableCharacteristics.find(c => c.id === id);
         return variable?.variableName;
       })
       .filter(Boolean) as string[];
+
+    // Jika tidak ada variabel karakteristik yang dipilih secara eksplisit, gunakan semua variabel yang tersedia
+    if (selectedVariableNames.length === 0 && availableCharacteristics.length > 0) {
+      console.log("Legacy mode: Tidak ada variabel karakteristik yang dipilih secara eksplisit, gunakan semua yang tersedia");
+
+      // Ambil semua nama variabel karakteristik yang unik
+      const allCharVariables = [...new Set(availableCharacteristics.map(c => c.variableName))];
+      allCharVariables.forEach(varName => {
+        if (!selectedVariableNames.includes(varName)) {
+          selectedVariableNames.push(varName);
+        }
+      });
+    }
 
     selectedCharacteristics.forEach((characteristicId) => {
       // Periksa apakah ini adalah ID variabel atau ID nilai karakteristik
@@ -1470,6 +1722,42 @@ export function QueryBuilderDataTable() {
         }
       }
     });
+
+    // Jika tidak ada karakteristik yang ditemukan, coba gunakan semua yang tersedia
+    if (Object.keys(characteristicsByVariable).length === 0) {
+      console.warn("No characteristics selected in legacy mode, trying to use all available characteristics");
+
+      // Coba dapatkan karakteristik dari nama variabel yang dipilih
+      for (const varName of selectedVariableNames) {
+        const variableValues = availableCharacteristics.filter(c => c.variableName === varName);
+        if (variableValues.length > 0) {
+          characteristicsByVariable[varName] = variableValues;
+        }
+      }
+
+      // Jika masih kosong, gunakan semua karakteristik yang tersedia
+      if (Object.keys(characteristicsByVariable).length === 0) {
+        const allCharVariables = [...new Set(availableCharacteristics.map(c => c.variableName))];
+        if (allCharVariables.length > 0) {
+          const primaryCharVariable = allCharVariables[0];
+          const charValues = availableCharacteristics.filter(c => c.variableName === primaryCharVariable);
+          if (charValues.length > 0) {
+            characteristicsByVariable[primaryCharVariable] = charValues;
+            console.log("Using all values for first characteristic variable:", primaryCharVariable);
+          }
+        }
+
+        // Jika masih kosong, kembalikan error
+        if (Object.keys(characteristicsByVariable).length === 0) {
+          toast({
+            title: "Tidak Ada Data",
+            description: "Tidak ada karakteristik yang tersedia.",
+            variant: "destructive",
+          });
+          return { data: [], columns: [] };
+        }
+      }
+    }
 
     // Log untuk debugging
     console.log("Selected characteristics (legacy):", selectedCharacteristics);
@@ -1784,6 +2072,34 @@ export function QueryBuilderDataTable() {
         console.log("Submitting selection to generate pivot table...");
         console.log("Current selected data:", selectedData);
 
+        // Validasi lagi apakah data yang dipilih valid
+        if (selectedData.years.length === 0) {
+          toast({
+            title: "Perhatian",
+            description: "Silakan pilih minimal satu Tahun",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (selectedData.characteristics.length === 0) {
+          toast({
+            title: "Perhatian",
+            description: "Silakan pilih minimal satu Karakteristik",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (selectedData.rowTitles.length === 0) {
+          toast({
+            title: "Perhatian",
+            description: "Silakan pilih minimal satu Judul Baris",
+            variant: "destructive",
+          });
+          return;
+        }
+
         // Tampilkan pesan loading
         toast({
           title: "Memproses Data",
@@ -1803,6 +2119,16 @@ export function QueryBuilderDataTable() {
             toast({
               title: "Tidak Ada Data",
               description: "Tidak ada data yang sesuai dengan kriteria filter yang dipilih. Silakan pilih filter lain.",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          // Tambahkan periksa apakah data kosong atau tidak mengandung baris selain total
+          if (data.length === 1 && Object.values(data[0]).some(val => val === "Total")) {
+            toast({
+              title: "Data Tidak Lengkap",
+              description: "Tabel hanya berisi data total, tidak ada data detail. Silakan periksa filter yang dipilih.",
               variant: "destructive",
             });
             return;
@@ -1830,7 +2156,7 @@ export function QueryBuilderDataTable() {
         console.error('Error generating pivot table:', error);
         toast({
           title: "Error",
-          description: "Terjadi kesalahan saat membuat tabel pivot.",
+          description: "Terjadi kesalahan saat membuat tabel pivot. " + (error instanceof Error ? error.message : ""),
           variant: "destructive",
         });
       }
