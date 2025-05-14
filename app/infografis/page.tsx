@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -34,7 +34,8 @@ interface Pagination {
   totalPages: number
 }
 
-export default function InfografisPage() {
+// Komponen utama yang menggunakan useSearchParams
+function InfografisPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
@@ -490,7 +491,10 @@ export default function InfografisPage() {
                               key={`${item.id}-tag-${index}`}
                               variant="outline"
                               className="text-xs cursor-pointer"
-                              onClick={() => handleTagClick(tag)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTagClick(tag);
+                              }}
                             >
                               {tag}
                             </Badge>
@@ -501,19 +505,15 @@ export default function InfografisPage() {
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <div className="flex items-center">
+                        <div className="flex justify-between items-center text-xs text-muted-foreground">
+                          <span className="flex items-center">
                             <Calendar className="h-3 w-3 mr-1" />
-                            {item.published_at ?
-                              format(new Date(item.published_at), "dd MMM yyyy", { locale: id }) :
-                              format(new Date(item.created_at), "dd MMM yyyy", { locale: id })}
-                          </div>
-                          <div
-                            className="cursor-pointer hover:text-primary"
-                            onClick={() => handleCategoryClick(item.category)}
-                          >
+                            {format(new Date(item.created_at), "dd MMM yyyy", { locale: id })}
+                          </span>
+                          <span className="flex items-center">
+                            <Tag className="h-3 w-3 mr-1" />
                             {item.category}
-                          </div>
+                          </span>
                         </div>
                       </div>
                     </CardContent>
@@ -522,10 +522,38 @@ export default function InfografisPage() {
               )}
             </div>
 
+            {/* Pagination */}
             {renderPagination()}
           </div>
         </div>
       </main>
     </div>
+  )
+}
+
+// Halaman dengan Suspense boundary
+export default function InfografisPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen flex-col">
+        <Header />
+        <main className="flex-1 container py-8">
+          <div className="mb-6">
+            <h1 className="text-2xl md:text-3xl font-bold">Infografis</h1>
+            <p className="text-muted-foreground mt-1">
+              Koleksi infografis visual dengan data terbaru
+            </p>
+          </div>
+          <div className="flex justify-center items-center py-12">
+            <div className="flex flex-col items-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-3"></div>
+              <p className="text-sm text-muted-foreground">Memuat infografis...</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    }>
+      <InfografisPageContent />
+    </Suspense>
   )
 }

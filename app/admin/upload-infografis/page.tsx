@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AdminLayout } from "@/components/admin/layout"
 import { Button } from "@/components/ui/button"
@@ -27,7 +27,8 @@ interface Tag {
   text: string
 }
 
-export default function UploadInfografisPage() {
+// Komponen utama yang menggunakan useSearchParams
+function UploadInfografisContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
@@ -758,9 +759,30 @@ export default function UploadInfografisPage() {
                 "Simpan Infografis"
               )}
             </Button>
-        </div>
+          </div>
         </form>
-    </div>
+      </div>
     </AdminLayout>
+  )
+}
+
+// Wrapper dengan Suspense boundary
+export default function UploadInfografisPage() {
+  return (
+    <Suspense fallback={
+      <AdminLayout
+        title="Upload Infografis"
+        description="Unggah infografis baru atau edit infografis yang sudah ada"
+      >
+        <div className="container py-6 flex justify-center items-center min-h-[50vh]">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-3"></div>
+            <p className="text-sm text-muted-foreground">Memuat halaman upload infografis...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    }>
+      <UploadInfografisContent />
+    </Suspense>
   )
 }
