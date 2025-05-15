@@ -32,7 +32,7 @@ type ChartDisplayProps = {
   yAxisLabel: string
   groupName?: string
   groupValues?: string[]
-  labelVarName?: string
+  labelName?: string
 }
 
 const COLORS = ["#E53E3E", "#38B2F8", "#805AD5", "#DD6B20", "#38A169", "#D69E2E", "#3182CE", "#D53F8C"]
@@ -132,6 +132,9 @@ export function ChartDisplay({
   yAxisFields,
   xAxisLabel,
   yAxisLabel,
+  groupName,
+  groupValues,
+  labelName
 }: ChartDisplayProps) {
   const [isVisible, setIsVisible] = useState(false)
   const [hasError, setHasError] = useState(false)
@@ -146,6 +149,14 @@ export function ChartDisplay({
 
     return () => clearTimeout(timer)
   }, [data, chartType, xAxisField, yAxisFields])
+
+  // Log untuk debugging
+  useEffect(() => {
+    if (groupName && groupValues) {
+      console.log(`Menampilkan grafik dengan pengelompokan berdasarkan ${groupName}:`, groupValues);
+      console.log("Field pada Y axis:", yAxisFields);
+    }
+  }, [groupName, groupValues, yAxisFields]);
 
   // Validasi data
   if (!data || !Array.isArray(data) || data.length === 0 || !yAxisFields || !yAxisFields.length) {
@@ -365,23 +376,53 @@ export function ChartDisplay({
                   padding={{ top: 10, bottom: 0 }}
                 />
                 <Tooltip content={<CustomTooltip />} />
-                {/* <Legend formatter={safeLegendFormatter} wrapperStyle={{ paddingTop: 10 }} /> */}
-              {yAxisFields.map((field, index) => (
+                <Legend formatter={safeLegendFormatter} wrapperStyle={{ paddingTop: 10 }} />
+
+                {/* Jika ada groupName dan groupValues, tampilkan grouped bar chart */}
+                {groupName && groupValues && groupValues.length > 0 && yAxisFields.some(field => field.includes('_')) ? (
+                  // Render grouped bars berdasarkan nilai grup
+                  groupValues.map((groupVal, index) => {
+                    // Cari field yang sesuai dengan nilai grup ini
+                    const groupFields = yAxisFields.filter(field => {
+                      if (field.includes('_')) {
+                        const parts = field.split('_');
+                        return parts[parts.length - 1] === groupVal;
+                      }
+                      return false;
+                    });
+
+                    return groupFields.map((field, fieldIndex) => (
+                      <Bar
+                        key={field}
+                        dataKey={field}
+                        name={field}
+                        fill={COLORS[index % COLORS.length]}
+                        radius={[4, 4, 0, 0]}
+                        isAnimationActive={true}
+                        animationDuration={1000}
+                        animationEasing="ease-out"
+                      />
+                    ));
+                  })
+                ) : (
+                  // Render bar chart biasa
+                  yAxisFields.map((field, index) => (
                 <Bar
                   key={field}
                   dataKey={field}
                   name={field}
                   fill={COLORS[index % COLORS.length]}
                   radius={[4, 4, 0, 0]}
-                    isAnimationActive={true}
-                    animationDuration={1000}
-                    animationEasing="ease-out"
+                      isAnimationActive={true}
+                      animationDuration={1000}
+                      animationEasing="ease-out"
                 />
-              ))}
+                  ))
+                )}
             </BarChart>
           </ResponsiveContainer>
-            <TotalDataInfo data={formattedData} chartType={chartType} yAxisFields={yAxisFields} />
-          </div>
+              <TotalDataInfo data={formattedData} chartType={chartType} yAxisFields={yAxisFields} />
+            </div>
         )}
 
         {chartType === "horizontal-bar" && (
@@ -445,8 +486,82 @@ export function ChartDisplay({
                   domain={['auto', 'auto']}
                 />
                 <Tooltip content={<CustomTooltip />} />
-                {/* <Legend formatter={safeLegendFormatter} wrapperStyle={{ paddingTop: 10 }} /> */}
-              {yAxisFields.map((field, index) => (
+                <Legend formatter={safeLegendFormatter} wrapperStyle={{ paddingTop: 10 }} />
+
+                {/* Jika ada groupName dan groupValues, gunakan pengelompokan */}
+                {groupName && groupValues && groupValues.length > 0 && yAxisFields.some(field => field.includes('_')) ? (
+                  // Render lines berdasarkan nilai grup
+                  groupValues.map((groupVal, index) => {
+                    // Cari field yang sesuai dengan nilai grup ini
+                    const groupFields = yAxisFields.filter(field => {
+                      if (field.includes('_')) {
+                        const parts = field.split('_');
+                        return parts[parts.length - 1] === groupVal;
+                      }
+                      return false;
+                    });
+
+                    return groupFields.map((field, fieldIndex) => (
+                      <Line
+                        key={field}
+                        type="monotone"
+                        dataKey={field}
+                        name={field}
+                        stroke={COLORS[index % COLORS.length]}
+                        strokeWidth={2}
+                        activeDot={{ r: 8 }}
+                        dot={{ r: 4 }}
+                        isAnimationActive={true}
+                        animationDuration={1500}
+                        animationEasing="ease-out"
+                        connectNulls={true}
+                      />
+                    ));
+                  })
+                ) : (
+                  // Jika ada groupName tetapi tidak ada di yAxisFields, gunakan groupName sebagai pembeda
+                  groupName && !yAxisFields.some(field => field.includes('_')) ? (
+                    // Grup data array berdasarkan nilai groupName
+                    Array.isArray(data) && data.length > 0 && typeof data[0][groupName] !== 'undefined' ? (
+                      // Untuk setiap yAxisField, buat multiple lines berdasarkan groupName
+                      yAxisFields.map((field) => (
+                        <Line
+                          key={`${field}`}
+                          type="monotone"
+                          dataKey={field}
+                          name={field}
+                          stroke={COLORS[yAxisFields.indexOf(field) % COLORS.length]}
+                          strokeWidth={2}
+                          activeDot={{ r: 8 }}
+                          dot={{ r: 4 }}
+                          isAnimationActive={true}
+                          animationDuration={1500}
+                          animationEasing="ease-out"
+                          connectNulls={true}
+                        />
+                      ))
+                    ) : (
+                      // Fallback jika tidak bisa mengakses groupName di data
+                      yAxisFields.map((field, index) => (
+                        <Line
+                          key={field}
+                          type="monotone"
+                          dataKey={field}
+                          name={field}
+                          stroke={COLORS[index % COLORS.length]}
+                          strokeWidth={2}
+                          activeDot={{ r: 8 }}
+                          dot={{ r: 4 }}
+                          isAnimationActive={true}
+                          animationDuration={1500}
+                          animationEasing="ease-out"
+                          connectNulls={true}
+                        />
+                      ))
+                    )
+                  ) : (
+                    // Render line chart biasa
+                    yAxisFields.map((field, index) => (
                 <Line
                   key={field}
                   type="monotone"
@@ -455,13 +570,15 @@ export function ChartDisplay({
                   stroke={COLORS[index % COLORS.length]}
                   strokeWidth={2}
                   activeDot={{ r: 8 }}
-                    dot={{ r: 4 }}
-                    isAnimationActive={true}
-                    animationDuration={1500}
-                    animationEasing="ease-out"
-                    connectNulls={true}
+                        dot={{ r: 4 }}
+                        isAnimationActive={true}
+                        animationDuration={1500}
+                        animationEasing="ease-out"
+                        connectNulls={true}
                 />
-              ))}
+                    ))
+                  )
+                )}
             </LineChart>
           </ResponsiveContainer>
             <TotalDataInfo data={formattedData} chartType={chartType} yAxisFields={yAxisFields} />
@@ -539,19 +656,49 @@ export function ChartDisplay({
                   domain={['auto', 'auto']}
                 />
                 <Tooltip content={<CustomTooltip />} />
-                {/* <Legend formatter={safeLegendFormatter} wrapperStyle={{ paddingTop: 10 }} /> */}
-              {yAxisFields.map((field, index) => (
-                  <Bar
-                    key={field}
-                    dataKey={field}
-                    name={field}
-                    stackId="a"
-                    fill={COLORS[index % COLORS.length]}
-                    isAnimationActive={true}
-                    animationDuration={1000}
-                    animationEasing="ease-out"
-                  />
-              ))}
+                <Legend formatter={safeLegendFormatter} wrapperStyle={{ paddingTop: 10 }} />
+
+                {/* Jika ada groupName dan groupValues, gunakan pengelompokan */}
+                {groupName && groupValues && groupValues.length > 0 && yAxisFields.some(field => field.includes('_')) ? (
+                  // Render stacked bars berdasarkan nilai grup
+                  groupValues.map((groupVal, index) => {
+                    // Cari field yang sesuai dengan nilai grup ini
+                    const groupFields = yAxisFields.filter(field => {
+                      if (field.includes('_')) {
+                        const parts = field.split('_');
+                        return parts[parts.length - 1] === groupVal;
+                      }
+                      return false;
+                    });
+
+                    return groupFields.map((field) => (
+                      <Bar
+                        key={field}
+                        dataKey={field}
+                        name={field}
+                        stackId="a"
+                        fill={COLORS[index % COLORS.length]}
+                        isAnimationActive={true}
+                        animationDuration={1000}
+                        animationEasing="ease-out"
+                      />
+                    ));
+                  })
+                ) : (
+                  // Render stacked bar chart biasa
+                  yAxisFields.map((field, index) => (
+                    <Bar
+                      key={field}
+                      dataKey={field}
+                      name={field}
+                      stackId="a"
+                      fill={COLORS[index % COLORS.length]}
+                      isAnimationActive={true}
+                      animationDuration={1000}
+                      animationEasing="ease-out"
+                    />
+                  ))
+                )}
             </BarChart>
           </ResponsiveContainer>
             <TotalDataInfo data={formattedData} chartType={chartType} yAxisFields={yAxisFields} />
@@ -580,8 +727,40 @@ export function ChartDisplay({
                   domain={['auto', 'auto']}
                 />
                 <Tooltip content={<CustomTooltip />} />
-                {/* <Legend formatter={safeLegendFormatter} wrapperStyle={{ paddingTop: 10 }} /> */}
-              {yAxisFields.map((field, index) => (
+                <Legend formatter={safeLegendFormatter} wrapperStyle={{ paddingTop: 10 }} />
+
+                {/* Jika ada groupName dan groupValues, gunakan pengelompokan */}
+                {groupName && groupValues && groupValues.length > 0 && yAxisFields.some(field => field.includes('_')) ? (
+                  // Render area charts berdasarkan nilai grup
+                  groupValues.map((groupVal, index) => {
+                    // Cari field yang sesuai dengan nilai grup ini
+                    const groupFields = yAxisFields.filter(field => {
+                      if (field.includes('_')) {
+                        const parts = field.split('_');
+                        return parts[parts.length - 1] === groupVal;
+                      }
+                      return false;
+                    });
+
+                    return groupFields.map((field) => (
+                      <Area
+                        key={field}
+                        type="monotone"
+                        dataKey={field}
+                        name={field}
+                        stroke={COLORS[index % COLORS.length]}
+                        fill={COLORS[index % COLORS.length]}
+                        fillOpacity={0.3}
+                        isAnimationActive={true}
+                        animationDuration={1500}
+                        animationEasing="ease-out"
+                        connectNulls={true}
+                      />
+                    ));
+                  })
+                ) : (
+                  // Render area chart biasa
+                  yAxisFields.map((field, index) => (
                 <Area
                   key={field}
                   type="monotone"
@@ -590,12 +769,13 @@ export function ChartDisplay({
                   stroke={COLORS[index % COLORS.length]}
                   fill={COLORS[index % COLORS.length]}
                   fillOpacity={0.3}
-                    isAnimationActive={true}
-                    animationDuration={1500}
-                    animationEasing="ease-out"
-                    connectNulls={true}
+                      isAnimationActive={true}
+                      animationDuration={1500}
+                      animationEasing="ease-out"
+                      connectNulls={true}
                 />
-              ))}
+                  ))
+                )}
             </AreaChart>
           </ResponsiveContainer>
             <TotalDataInfo data={formattedData} chartType={chartType} yAxisFields={yAxisFields} />
@@ -628,9 +808,21 @@ export function ChartDisplay({
                     return (
                         <div className="bg-white p-3 border rounded-md shadow-md">
                           <p className="font-semibold mb-1 text-sm">{payload[0]?.payload?.name || "Tidak diketahui"}</p>
+                          {groupName && (
+                            <p className="text-xs text-muted-foreground mb-1">
+                              {groupName}: <strong>{payload[0]?.payload?.[groupName] || "Tidak ada"}</strong>
+                            </p>
+                          )}
                           <div className="space-y-1">
                             <div className="flex items-center">
-                              <div className="w-3 h-3 mr-2" style={{ backgroundColor: COLORS[0] }} />
+                              <div
+                                className="w-3 h-3 mr-2"
+                                style={{
+                                  backgroundColor: groupName && payload[0]?.payload?.[groupName] ?
+                                    COLORS[groupValues?.indexOf(payload[0]?.payload?.[groupName]) % COLORS.length] :
+                                    COLORS[0]
+                                }}
+                              />
                               <span className="text-sm">{yAxisFields[0]}: </span>
                               <span className="text-sm font-semibold ml-1">
                                 {(payload[0]?.value || 0).toLocaleString()}
@@ -659,19 +851,145 @@ export function ChartDisplay({
                     return null;
                 }}
               />
-                {/* <Legend formatter={safeLegendFormatter} /> */}
+              <Legend formatter={safeLegendFormatter} />
+
+                {/* Jika ada groupName dan groupValues, kelompokkan scatter points berdasarkan grup */}
+                {groupName && groupValues && groupValues.length > 0 ? (
+                  // Buat Scatter plot terpisah untuk setiap nilai grup
+                  groupValues.map((groupVal, index) => {
+                    // Filter data untuk nilai grup ini
+                    const groupData = scatterChartData.filter(item => item[groupName] === groupVal);
+
+                    return (
+                      <Scatter
+                        key={`scatter-${groupVal}`}
+                        name={`${groupVal}`}
+                        data={groupData}
+                        fill={COLORS[index % COLORS.length]}
+                        shape="circle"
+                        isAnimationActive={true}
+                        animationDuration={1500}
+                        animationEasing="ease-out"
+                      />
+                    );
+                  })
+                ) : (
+                  // Render scatter plot biasa
               <Scatter
                 name={`${yAxisFields[0]} vs ${yAxisFields[1]}`}
                 data={scatterChartData}
                 fill={COLORS[0]}
                 shape="circle"
-                  isAnimationActive={true}
-                  animationDuration={1500}
-                  animationEasing="ease-out"
+                    isAnimationActive={true}
+                    animationDuration={1500}
+                    animationEasing="ease-out"
               />
+                )}
             </ScatterChart>
           </ResponsiveContainer>
             <TotalDataInfo data={scatterChartData} chartType={chartType} yAxisFields={yAxisFields} />
+          </div>
+        )}
+
+        {/* Grafik Batang Kelompok */}
+        {chartType === "grouped-bar" && (
+          <div className="w-full h-full flex flex-col">
+            <ResponsiveContainer width="100%" height="90%" debounce={50}>
+              <BarChart data={formattedData} margin={getMargin(chartType)}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey={xAxisField}
+                  angle={-35}
+                  textAnchor="end"
+                  height={80}
+                  label={{
+                    value: xAxisLabel,
+                    position: "insideBottom",
+                    offset: -30,
+                    style: { fontSize: 13, fontWeight: 500 }
+                  }}
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={formatXAxisTick}
+                  interval={formattedData.length > 8 ? (formattedData.length > 20 ? 'preserveStartEnd' : 'equidistantPreserveStart') : 0}
+                  padding={{ left: 10, right: 10 }}
+                />
+                <YAxis
+                  label={{
+                    value: yAxisLabel,
+                    angle: -90,
+                    position: "insideLeft",
+                    offset: -45,
+                    style: { fontSize: 13, fontWeight: 500 }
+                  }}
+                  width={60}
+                  tickFormatter={getYAxisTickFormatter()}
+                  domain={['auto', 'auto']}
+                  padding={{ top: 10, bottom: 0 }}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend formatter={safeLegendFormatter} wrapperStyle={{ paddingTop: 10 }} />
+
+                {/* Jika ada groupName dan groupValues, tampilkan grouped bar chart */}
+                {groupName && groupValues && groupValues.length > 0 && yAxisFields.some(field => field.includes('_')) ? (
+                  // Render grouped bars berdasarkan nilai grup
+                  groupValues.map((groupVal, index) => {
+                    // Cari field yang sesuai dengan nilai grup ini
+                    const groupFields = yAxisFields.filter(field => {
+                      if (field.includes('_')) {
+                        const parts = field.split('_');
+                        return parts[parts.length - 1] === groupVal;
+                      }
+                      return false;
+                    });
+
+                    return groupFields.map((field, fieldIndex) => (
+                      <Bar
+                        key={field}
+                        dataKey={field}
+                        name={field}
+                        fill={COLORS[index % COLORS.length]}
+                        radius={[4, 4, 0, 0]}
+                        isAnimationActive={true}
+                        animationDuration={1000}
+                        animationEasing="ease-out"
+                      />
+                    ));
+                  })
+                ) : (
+                  // Jika ada groupName tetapi tidak ada di yAxisFields, gunakan groupName sebagai pembeda
+                  groupName && !yAxisFields.some(field => field.includes('_')) ? (
+                    // Untuk setiap yAxisField, buat multiple bars berdasarkan groupName
+                    yAxisFields.map((field, index) => (
+                      <Bar
+                        key={field}
+                        dataKey={field}
+                        name={field}
+                        fill={COLORS[index % COLORS.length]}
+                        radius={[4, 4, 0, 0]}
+                        isAnimationActive={true}
+                        animationDuration={1000}
+                        animationEasing="ease-out"
+                      />
+                    ))
+                  ) : (
+                    // Fallback ke bar chart biasa
+                    yAxisFields.map((field, index) => (
+                      <Bar
+                        key={field}
+                        dataKey={field}
+                        name={field}
+                        fill={COLORS[index % COLORS.length]}
+                        radius={[4, 4, 0, 0]}
+                        isAnimationActive={true}
+                        animationDuration={1000}
+                        animationEasing="ease-out"
+                      />
+                    ))
+                  )
+                )}
+              </BarChart>
+            </ResponsiveContainer>
+            <TotalDataInfo data={formattedData} chartType={chartType} yAxisFields={yAxisFields} />
           </div>
         )}
       </div>

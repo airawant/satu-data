@@ -1369,28 +1369,28 @@ export function QueryBuilderDataTable() {
       if (!year || year === "null" || year === "undefined") return;
 
       yearDerivativeValues.forEach((derivative) => {
-        Object.keys(characteristicsByVariable).forEach((variableName) => {
-          const characteristicValues = characteristicsByVariable[variableName];
+      Object.keys(characteristicsByVariable).forEach((variableName) => {
+        const characteristicValues = characteristicsByVariable[variableName];
 
-          if (!characteristicValues || characteristicValues.length === 0) {
+        if (!characteristicValues || characteristicValues.length === 0) {
             console.log(`No selected characteristic values for ${variableName} in legacy mode, skipping`);
-            return; // Skip if no characteristic values
-          }
+          return; // Skip if no characteristic values
+        }
 
-          characteristicValues.forEach((characteristic) => {
+        characteristicValues.forEach((characteristic) => {
             const columnId = derivative ?
               `${year}_${derivative}_${variableName}_${characteristic.name}` :
               `${year}_${variableName}_${characteristic.name}`;
 
-            characteristicValueColumns.push({
+          characteristicValueColumns.push({
               id: columnId,
-              name: characteristic.name,
-              year,
+            name: characteristic.name,
+            year,
               yearDerivative: derivative || undefined,
-              characteristicName: variableName,
-              characteristicValue: characteristic.name,
-              type: characteristic.type || "count",
-              aggregationMethod,
+            characteristicName: variableName,
+            characteristicValue: characteristic.name,
+            type: characteristic.type || "count",
+            aggregationMethod,
             });
           });
         });
@@ -2966,9 +2966,9 @@ export function QueryBuilderDataTable() {
                           <th
                             key={`subheader-${column.id}`}
                             className="border p-2 bg-blue-700 text-white font-medium text-xs text-center"
-                          >
-                            {column.characteristicValue}
-                          </th>
+                        >
+                          {column.characteristicValue}
+                        </th>
                         ));
                       });
                     })}

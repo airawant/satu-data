@@ -439,230 +439,496 @@ export function ChartBuilder() {
         groupName: groupVariableName || ""
       };
 
+      // Ekstrak nilai unik dari grup variabel (jika ada)
+      let groupValues: string[] = [];
+
+      if (groupVariableName) {
+        groupValues = Array.from(new Set(
+          actualData
+            .filter(row => row[groupVariableName] !== undefined && row[groupVariableName] !== null)
+            .map(row => String(row[groupVariableName]))
+        )).filter(val => val && val.trim() !== "");
+
+        // Sort nilai grup
+        groupValues.sort();
+
+        console.log(`Nilai unik pada variabel grup ${groupVariableName}:`, groupValues);
+      }
+
       // Process data based on chart type
       try {
         // Untuk grafik yang memerlukan data agregat
         if (["bar", "line", "pie", "stacked-bar", "area", "horizontal-bar"].includes(selectedChartType)) {
-          // Agregasi data berdasarkan sumbu X
-          const aggregatedData: Record<string, any> = {};
+          // Jika ada variabel grup yang dipilih, agregasi berdasarkan sumbu X dan grup
+          if (groupVariableName && groupValues.length > 0) {
+            // Untuk stacked dan grouped bar chart, proses data secara berbeda
+            if (["stacked-bar", "grouped-bar"].includes(selectedChartType)) {
+              // Agregasi data berdasarkan sumbu X dan nilai grup
+              const aggregatedByGroupData: Record<string, Record<string, any>> = {};
 
-          actualData.forEach(row => {
-            const xValue = row[primaryXAxis];
+              actualData.forEach(row => {
+                const xValue = row[primaryXAxis];
+                const groupValue = row[groupVariableName];
 
-            // Skip nilai x yang tidak valid
-            if (xValue === undefined || xValue === null || xValue === "") {
-              return; // Lanjut ke row berikutnya
-            }
+                // Skip jika nilai x atau group tidak valid
+                if (xValue === undefined || xValue === null || xValue === "" ||
+                    groupValue === undefined || groupValue === null) {
+                  return;
+                }
 
-            const xKey = String(xValue);
+                const xKey = String(xValue);
+                const groupKey = String(groupValue);
 
-            if (!aggregatedData[xKey]) {
-              aggregatedData[xKey] = {
-                [primaryXAxis]: xKey,
-                count: 0
-              };
+                // Inisialisasi objek untuk nilai x jika belum ada
+                if (!aggregatedByGroupData[xKey]) {
+                  aggregatedByGroupData[xKey] = {
+                    [primaryXAxis]: xKey,
+                  };
 
-              // Initialize all y-axis values to 0
-              if (yAxisVariables.length > 0) {
-                yAxisVariables.forEach(yVar => {
-                  aggregatedData[xKey][yVar] = 0;
-                });
-              }
-            }
+                  // Inisialisasi count untuk setiap nilai grup
+                  groupValues.forEach(gValue => {
+                    aggregatedByGroupData[xKey][`count_${gValue}`] = 0;
+                  });
 
-            // Increment count
-            aggregatedData[xKey].count += 1;
-
-            // Sum numeric values
-            if (yAxisVariables.length > 0) {
-              yAxisVariables.forEach(yVar => {
-                const yValue = row[yVar];
-                if (yValue !== undefined && yValue !== null) {
-                  // Convert to number first
-                  const numValue = Number(yValue);
-                  if (!isNaN(numValue)) {
-                    aggregatedData[xKey][yVar] += numValue;
+                  // Inisialisasi nilai y untuk setiap nilai grup
+                  if (yAxisVariables.length > 0) {
+                    yAxisVariables.forEach(yVar => {
+                      groupValues.forEach(gValue => {
+                        aggregatedByGroupData[xKey][`${yVar}_${gValue}`] = 0;
+                      });
+                    });
                   }
                 }
-              });
-            }
-          });
 
-          // Convert to array
-          const result = Object.values(aggregatedData);
+                // Increment count untuk nilai grup ini
+                aggregatedByGroupData[xKey][`count_${groupKey}`] += 1;
 
-          // Sort the result by X-axis values if they are dates or numbers
-          const sortedResult = [...result].sort((a, b) => {
-            const aValue = a[primaryXAxis];
-            const bValue = b[primaryXAxis];
-
-            // If both values can be parsed as dates
-            if (!isNaN(Date.parse(aValue)) && !isNaN(Date.parse(bValue))) {
-              return new Date(aValue).getTime() - new Date(bValue).getTime();
-            }
-
-            // If both values can be parsed as numbers
-            if (!isNaN(Number(aValue)) && !isNaN(Number(bValue))) {
-              return Number(aValue) - Number(bValue);
-            }
-
-            // Default to string comparison
-            return String(aValue).localeCompare(String(bValue));
-          });
-
-          // Batasi jumlah data untuk visualisasi yang lebih baik
-          let finalResult = sortedResult;
-
-          // Untuk grafik pie, batasi jumlah data
-          if (selectedChartType === "pie" && finalResult.length > 15) {
-            // Ambil top 14 value tertinggi berdasarkan y value atau count
-            const sortField = yAxisVariables.length > 0 ? yAxisVariables[0] : "count";
-
-            // Pastikan data sudah diurutkan dengan benar sebelum dipotong
-            const topItems = [...finalResult]
-              .sort((a, b) => {
-                // Pastikan nilai valid untuk perbandingan
-                const valueA = Number(a[sortField]) || 0;
-                const valueB = Number(b[sortField]) || 0;
-                return valueB - valueA; // Sort descending
-              })
-              .slice(0, 14);
-
-            // Gabungkan sisanya menjadi "Lainnya"
-            const otherItems = finalResult.filter(item => !topItems.includes(item));
-            if (otherItems.length > 0) {
-              const otherItem: Record<string, any> = {
-                [primaryXAxis]: "Lainnya",
-                count: 0
-              };
-
-              // Tambahkan semua nilai lainnya
-              yAxisVariables.forEach(yVar => {
-                otherItem[yVar] = otherItems.reduce((sum, item) => {
-                  const val = Number(item[yVar]) || 0;
-                  return sum + val;
-                }, 0);
+                // Sum nilai Y untuk nilai grup ini
+                if (yAxisVariables.length > 0) {
+                  yAxisVariables.forEach(yVar => {
+                    const yValue = row[yVar];
+                    if (yValue !== undefined && yValue !== null) {
+                      const numValue = Number(yValue);
+                      if (!isNaN(numValue)) {
+                        aggregatedByGroupData[xKey][`${yVar}_${groupKey}`] += numValue;
+                      }
+                    }
+                  });
+                }
               });
 
-              // Hitung jumlah total
-              otherItem.count = otherItems.reduce((sum, item) => {
-                const val = Number(item.count) || 0;
-                return sum + val;
-              }, 0);
+              // Convert ke array
+              const result = Object.values(aggregatedByGroupData);
 
-              // Tambahkan kategori "Lainnya" hanya jika nilainya > 0
-              if (otherItem.count > 0 || (yAxisVariables.length > 0 && otherItem[yAxisVariables[0]] > 0)) {
-                topItems.push(otherItem);
-              }
-            }
+              // Sort the result by X-axis values if they are dates or numbers
+              const sortedResult = [...result].sort((a, b) => {
+                const aValue = a[primaryXAxis];
+                const bValue = b[primaryXAxis];
 
-            finalResult = topItems;
-          }
-          // Untuk grafik batang/garis, batasi jumlah data jika terlalu banyak
-          else if (["bar", "line", "stacked-bar", "area", "horizontal-bar"].includes(selectedChartType) && finalResult.length > 30) {
-            // Untuk grafik batang horizontal, batasi lebih ketat untuk keterbacaan
-            const maxItems = selectedChartType === "horizontal-bar" ? 15 : 30;
+                // If both values can be parsed as dates
+                if (!isNaN(Date.parse(aValue)) && !isNaN(Date.parse(bValue))) {
+                  return new Date(aValue).getTime() - new Date(bValue).getTime();
+                }
 
-            // Ambil data sesuai dengan jenis grafik (bar: tertinggi, line/area: berurutan)
-            if (["bar", "stacked-bar", "horizontal-bar"].includes(selectedChartType)) {
-              const sortField = yAxisVariables.length > 0 ? yAxisVariables[0] : "count";
-              finalResult = [...finalResult].sort((a, b) => (b[sortField] || 0) - (a[sortField] || 0)).slice(0, maxItems);
-            } else {
-              // Untuk time series, ambil data dengan interval yang sesuai
-              const interval = Math.ceil(finalResult.length / maxItems);
-              finalResult = finalResult.filter((_, index) => index % interval === 0);
+                // If both values can be parsed as numbers
+                if (!isNaN(Number(aValue)) && !isNaN(Number(bValue))) {
+                  return Number(aValue) - Number(bValue);
+                }
 
-              // Pastikan data terakhir selalu dimasukkan
-              if (finalResult.length > 0 && finalResult[finalResult.length - 1] !== sortedResult[sortedResult.length - 1]) {
-                finalResult.push(sortedResult[sortedResult.length - 1]);
-              }
-            }
-          }
-
-          return {
-            data: finalResult,
-            xAxisName: primaryXAxis,
-            yAxisNames: yAxisVariables.length ? yAxisVariables : ["count"],
-            groupName: groupVariableName || "",
-            groupValues: groupVariableName ? [...new Set(actualData.map(row => row[groupVariableName]))] : [],
-            labelName: labelVariableName || ""
-          };
-        }
-        // Untuk scatter chart yang memerlukan data mentah
-        else if (selectedChartType === "scatter") {
-          // Clean the data for scatter plot
-          const scatterData = actualData
-            .filter(row => {
-              // Pastikan row memiliki nilai x yang valid
-              if (row[primaryXAxis] === undefined || row[primaryXAxis] === null || row[primaryXAxis] === "") {
-                return false;
-              }
-
-              // Pastikan row memiliki semua nilai y yang diperlukan
-              return yAxisVariables.every(yVar => {
-                const val = row[yVar];
-                return val !== undefined && val !== null && !isNaN(Number(val));
-              });
-            })
-            .map(row => {
-              const item: Record<string, any> = {};
-
-              // Add X-axis identifier
-              item[primaryXAxis] = row[primaryXAxis];
-
-              // Add Y variables as numeric values
-              yAxisVariables.forEach(yVar => {
-                const numValue = Number(row[yVar]);
-                item[yVar] = !isNaN(numValue) ? numValue : 0;
+                // Default to string comparison
+                return String(aValue).localeCompare(String(bValue));
               });
 
-              return item;
-            });
+              // Batasi jumlah data untuk visualisasi yang lebih baik
+              let finalResult = sortedResult;
 
-          return {
-            data: scatterData,
-            xAxisName: primaryXAxis || "",
-            yAxisNames: yAxisVariables,
-            groupName: groupVariableName || "",
-            groupValues: groupVariableName ? [...new Set(actualData.map(row => row[groupVariableName]))] : [],
-            labelName: labelVariableName || ""
-          };
-        }
-        // Fallback untuk jenis grafik lainnya
-        else {
-          // Simplest possible implementation - convert data to numbers
-          const simpleData = actualData
-            .filter(row => {
-              // Pastikan row memiliki nilai x yang valid
-              return row[primaryXAxis] !== undefined && row[primaryXAxis] !== null && row[primaryXAxis] !== "";
-            })
-            .map(row => {
-              const item: Record<string, any> = {};
+              // Untuk grafik batang/garis, batasi jumlah data jika terlalu banyak
+              if (finalResult.length > 30) {
+                const maxItems = selectedChartType === "horizontal-bar" ? 15 : 30;
 
-              // Add X-axis value
-              item[primaryXAxis] = row[primaryXAxis];
+                if (["bar", "stacked-bar", "horizontal-bar"].includes(selectedChartType)) {
+                  // Untuk grafik batang, ambil data dengan nilai tertinggi
+                  const sortField = yAxisVariables.length > 0 ?
+                    `${yAxisVariables[0]}_${groupValues[0]}` :
+                    `count_${groupValues[0]}`;
 
-          // Add Y values
-          if (yAxisVariables.length === 0) {
-            item["count"] = 1;
+                  finalResult = [...finalResult]
+                    .sort((a, b) => (b[sortField] || 0) - (a[sortField] || 0))
+                    .slice(0, maxItems);
           } else {
-            yAxisVariables.forEach(yVar => {
-                  const numValue = Number(row[yVar]);
-                  item[yVar] = !isNaN(numValue) ? numValue : 0;
-            });
-          }
+                  // Untuk line/area, ambil data dengan interval yang sesuai
+                  const interval = Math.ceil(finalResult.length / maxItems);
+                  finalResult = finalResult.filter((_, index) => index % interval === 0);
 
-          return item;
-        });
+                  // Pastikan data terakhir selalu dimasukkan
+                  if (finalResult.length > 0 && finalResult[finalResult.length - 1] !== sortedResult[sortedResult.length - 1]) {
+                    finalResult.push(sortedResult[sortedResult.length - 1]);
+                  }
+                }
+              }
+
+              // Generate yAxisNames based on groupValues
+              const generatedYAxisNames: string[] = [];
+
+              if (yAxisVariables.length > 0) {
+            yAxisVariables.forEach(yVar => {
+                  groupValues.forEach(gValue => {
+                    generatedYAxisNames.push(`${yVar}_${gValue}`);
+                  });
+                });
+              } else {
+                groupValues.forEach(gValue => {
+                  generatedYAxisNames.push(`count_${gValue}`);
+                });
+              }
+
+              return {
+                data: finalResult,
+                xAxisName: primaryXAxis,
+                yAxisNames: generatedYAxisNames,
+                groupName: groupVariableName,
+                groupValues: groupValues,
+                labelName: labelVariableName || ""
+              };
+            } else {
+              // Untuk chart lain dengan fitur grouping
+              const aggregatedData: Record<string, any>[] = [];
+
+              // Lakukan agregasi per nilai grup
+              groupValues.forEach(groupVal => {
+                // Filter data hanya untuk nilai grup ini
+                const groupData = actualData.filter(row =>
+                  row[groupVariableName] !== undefined &&
+                  String(row[groupVariableName]) === groupVal
+                );
+
+                // Agregasi data berdasarkan sumbu X untuk nilai grup ini
+                const aggregatedByX: Record<string, any> = {};
+
+                groupData.forEach(row => {
+                  const xValue = row[primaryXAxis];
+
+                  // Skip nilai x yang tidak valid
+                  if (xValue === undefined || xValue === null || xValue === "") {
+                    return;
+                  }
+
+                  const xKey = String(xValue);
+
+                  if (!aggregatedByX[xKey]) {
+                    aggregatedByX[xKey] = {
+                      [primaryXAxis]: xKey,
+                      [groupVariableName]: groupVal,
+                      count: 0
+                    };
+
+                    // Initialize all y-axis values to 0
+                    if (yAxisVariables.length > 0) {
+                      yAxisVariables.forEach(yVar => {
+                        aggregatedByX[xKey][yVar] = 0;
+                      });
+                    }
+                  }
+
+                  // Increment count
+                  aggregatedByX[xKey].count += 1;
+
+                  // Sum numeric values
+                  if (yAxisVariables.length > 0) {
+                    yAxisVariables.forEach(yVar => {
+                      const yValue = row[yVar];
+                      if (yValue !== undefined && yValue !== null) {
+                        const numValue = Number(yValue);
+                        if (!isNaN(numValue)) {
+                          aggregatedByX[xKey][yVar] += numValue;
+                        }
+                      }
+                    });
+                  }
+                });
+
+                // Tambahkan data agregasi grup ini ke hasil
+                Object.values(aggregatedByX).forEach(item => {
+                  aggregatedData.push(item);
+                });
+              });
+
+              // Sort data jika diperlukan
+              if (selectedChartType === "line" || selectedChartType === "area") {
+                aggregatedData.sort((a, b) => {
+                  // Group by groupVariable first
+                  if (a[groupVariableName] !== b[groupVariableName]) {
+                    return String(a[groupVariableName]).localeCompare(String(b[groupVariableName]));
+                  }
+
+                  // Then sort by x-axis
+                  const aValue = a[primaryXAxis];
+                  const bValue = b[primaryXAxis];
+
+                  // If both values can be parsed as dates
+                  if (!isNaN(Date.parse(aValue)) && !isNaN(Date.parse(bValue))) {
+                    return new Date(aValue).getTime() - new Date(bValue).getTime();
+                  }
+
+                  // If both values can be parsed as numbers
+                  if (!isNaN(Number(aValue)) && !isNaN(Number(bValue))) {
+                    return Number(aValue) - Number(bValue);
+                  }
+
+                  // Default to string comparison
+                  return String(aValue).localeCompare(String(bValue));
+                });
+              }
+
+              // Batasi jumlah data jika terlalu banyak
+              let finalResult = aggregatedData;
 
         return {
-          data: simpleData,
+                data: finalResult,
           xAxisName: primaryXAxis,
           yAxisNames: yAxisVariables.length ? yAxisVariables : ["count"],
-            groupName: groupVariableName || "",
-            groupValues: groupVariableName ? [...new Set(actualData.map(row => row[groupVariableName]))] : [],
-            labelName: labelVariableName || ""
-        };
+                groupName: groupVariableName,
+                groupValues: groupValues,
+                labelName: labelVariableName || ""
+              };
+            }
+          } else {
+            // Tanpa variabel grup - implementasi yang sudah ada
+            const aggregatedData: Record<string, any> = {};
+
+            actualData.forEach(row => {
+              const xValue = row[primaryXAxis];
+
+              // Skip nilai x yang tidak valid
+              if (xValue === undefined || xValue === null || xValue === "") {
+                return; // Lanjut ke row berikutnya
+              }
+
+              const xKey = String(xValue);
+
+              if (!aggregatedData[xKey]) {
+                aggregatedData[xKey] = {
+                  [primaryXAxis]: xKey,
+                  count: 0
+                };
+
+                // Initialize all y-axis values to 0
+                if (yAxisVariables.length > 0) {
+                  yAxisVariables.forEach(yVar => {
+                    aggregatedData[xKey][yVar] = 0;
+                  });
+                }
+              }
+
+              // Increment count
+              aggregatedData[xKey].count += 1;
+
+              // Sum numeric values
+              if (yAxisVariables.length > 0) {
+                yAxisVariables.forEach(yVar => {
+                  const yValue = row[yVar];
+                  if (yValue !== undefined && yValue !== null) {
+                    // Convert to number first
+                    const numValue = Number(yValue);
+                    if (!isNaN(numValue)) {
+                      aggregatedData[xKey][yVar] += numValue;
+                    }
+                  }
+                });
+              }
+            });
+
+            // Convert to array
+            const result = Object.values(aggregatedData);
+
+            // Sort the result by X-axis values if they are dates or numbers
+            const sortedResult = [...result].sort((a, b) => {
+              const aValue = a[primaryXAxis];
+              const bValue = b[primaryXAxis];
+
+              // If both values can be parsed as dates
+              if (!isNaN(Date.parse(aValue)) && !isNaN(Date.parse(bValue))) {
+                return new Date(aValue).getTime() - new Date(bValue).getTime();
+              }
+
+              // If both values can be parsed as numbers
+              if (!isNaN(Number(aValue)) && !isNaN(Number(bValue))) {
+                return Number(aValue) - Number(bValue);
+              }
+
+              // Default to string comparison
+              return String(aValue).localeCompare(String(bValue));
+            });
+
+            // Batasi jumlah data untuk visualisasi yang lebih baik
+            let finalResult = sortedResult;
+
+            // Untuk grafik pie, batasi jumlah data
+            if (selectedChartType === "pie" && finalResult.length > 15) {
+              // Ambil top 14 value tertinggi berdasarkan y value atau count
+              const sortField = yAxisVariables.length > 0 ? yAxisVariables[0] : "count";
+
+              // Pastikan data sudah diurutkan dengan benar sebelum dipotong
+              const topItems = [...finalResult]
+                .sort((a, b) => {
+                  // Pastikan nilai valid untuk perbandingan
+                  const valueA = Number(a[sortField]) || 0;
+                  const valueB = Number(b[sortField]) || 0;
+                  return valueB - valueA; // Sort descending
+                })
+                .slice(0, 14);
+
+              // Gabungkan sisanya menjadi "Lainnya"
+              const otherItems = finalResult.filter(item => !topItems.includes(item));
+              if (otherItems.length > 0) {
+                const otherItem: Record<string, any> = {
+                  [primaryXAxis]: "Lainnya",
+                  count: 0
+                };
+
+                // Tambahkan semua nilai lainnya
+                yAxisVariables.forEach(yVar => {
+                  otherItem[yVar] = otherItems.reduce((sum, item) => {
+                    const val = Number(item[yVar]) || 0;
+                    return sum + val;
+                  }, 0);
+                });
+
+                // Hitung jumlah total
+                otherItem.count = otherItems.reduce((sum, item) => {
+                  const val = Number(item.count) || 0;
+                  return sum + val;
+                }, 0);
+
+                // Tambahkan kategori "Lainnya" hanya jika nilainya > 0
+                if (otherItem.count > 0 || (yAxisVariables.length > 0 && otherItem[yAxisVariables[0]] > 0)) {
+                  topItems.push(otherItem);
+                }
+              }
+
+              finalResult = topItems;
+            }
+            // Untuk grafik batang/garis, batasi jumlah data jika terlalu banyak
+            else if (["bar", "line", "stacked-bar", "area", "horizontal-bar"].includes(selectedChartType) && finalResult.length > 30) {
+              // Untuk grafik batang horizontal, batasi lebih ketat untuk keterbacaan
+              const maxItems = selectedChartType === "horizontal-bar" ? 15 : 30;
+
+              // Ambil data sesuai dengan jenis grafik (bar: tertinggi, line/area: berurutan)
+              if (["bar", "stacked-bar", "horizontal-bar"].includes(selectedChartType)) {
+                const sortField = yAxisVariables.length > 0 ? yAxisVariables[0] : "count";
+                finalResult = [...finalResult].sort((a, b) => (b[sortField] || 0) - (a[sortField] || 0)).slice(0, maxItems);
+              } else {
+                // Untuk time series, ambil data dengan interval yang sesuai
+                const interval = Math.ceil(finalResult.length / maxItems);
+                finalResult = finalResult.filter((_, index) => index % interval === 0);
+
+                // Pastikan data terakhir selalu dimasukkan
+                if (finalResult.length > 0 && finalResult[finalResult.length - 1] !== sortedResult[sortedResult.length - 1]) {
+                  finalResult.push(sortedResult[sortedResult.length - 1]);
+                }
+              }
+            }
+
+            return {
+              data: finalResult,
+              xAxisName: primaryXAxis,
+              yAxisNames: yAxisVariables.length ? yAxisVariables : ["count"],
+              groupName: groupVariableName || "",
+              groupValues: groupValues,
+              labelName: labelVariableName || ""
+            };
+          }
+        }
+        // Untuk grafik yang memerlukan data mentah (seperti scatter)
+        else {
+          // Process sesuai kebutuhan untuk scatter charts atau jenis lainnya.
+          // Implementation sama dengan yang sudah ada, dengan penambahan grouping jika diperlukan.
+
+          // Untuk scatter chart dengan grup
+          if (selectedChartType === "scatter" && groupVariableName) {
+            // Clean the data for scatter plot with grouping
+            const scatterData = actualData
+              .filter(row => {
+                // Pastikan row memiliki nilai x, grup, dan y yang valid
+                if (row[primaryXAxis] === undefined || row[primaryXAxis] === null || row[primaryXAxis] === "") {
+                  return false;
+                }
+
+                if (row[groupVariableName] === undefined || row[groupVariableName] === null) {
+                  return false;
+                }
+
+                // Pastikan row memiliki semua nilai y yang diperlukan
+                return yAxisVariables.every(yVar => {
+                  const val = row[yVar];
+                  return val !== undefined && val !== null && !isNaN(Number(val));
+                });
+              })
+              .map(row => {
+                const item: Record<string, any> = {};
+
+                // Add X-axis identifier
+                item[primaryXAxis] = row[primaryXAxis];
+
+                // Add group identifier
+                item[groupVariableName] = row[groupVariableName];
+
+                // Add Y variables as numeric values
+                yAxisVariables.forEach(yVar => {
+                  const numValue = Number(row[yVar]);
+                  item[yVar] = !isNaN(numValue) ? numValue : 0;
+                });
+
+                return item;
+              });
+
+            return {
+              data: scatterData,
+              xAxisName: primaryXAxis,
+              yAxisNames: yAxisVariables,
+              groupName: groupVariableName,
+              groupValues: groupValues,
+              labelName: labelVariableName || ""
+            };
+          } else {
+            // Implementasi scatter chart yang sudah ada tanpa grup
+            const scatterData = actualData
+              .filter(row => {
+                // Pastikan row memiliki nilai x yang valid
+                if (row[primaryXAxis] === undefined || row[primaryXAxis] === null || row[primaryXAxis] === "") {
+                  return false;
+                }
+
+                // Pastikan row memiliki semua nilai y yang diperlukan
+                return yAxisVariables.every(yVar => {
+                  const val = row[yVar];
+                  return val !== undefined && val !== null && !isNaN(Number(val));
+                });
+              })
+              .map(row => {
+                const item: Record<string, any> = {};
+
+                // Add X-axis identifier
+                item[primaryXAxis] = row[primaryXAxis];
+
+                // Add Y variables as numeric values
+                yAxisVariables.forEach(yVar => {
+                  const numValue = Number(row[yVar]);
+                  item[yVar] = !isNaN(numValue) ? numValue : 0;
+                });
+
+                return item;
+              });
+
+            return {
+              data: scatterData,
+              xAxisName: primaryXAxis || "",
+              yAxisNames: yAxisVariables,
+              groupName: groupVariableName || "",
+              groupValues: groupValues,
+              labelName: labelVariableName || ""
+            };
+          }
         }
       } catch (err) {
         console.error("Error processing chart data:", err);
