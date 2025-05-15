@@ -307,11 +307,14 @@ export function ChartDisplay({
 
     // Tentukan margin berdasarkan jenis grafik
     const getMargin = (chartType: string) => {
+      console.log("Getting margin for chart type:", chartType);
+
       switch (chartType) {
         case 'horizontal-bar':
           return { top: 20, right: 30, left: 130, bottom: 30 }
         case 'bar':
         case 'stacked-bar':
+        case 'grouped-bar':
         case 'line':
         case 'area':
           return { top: 20, right: 30, left: 60, bottom: 80 }
@@ -320,6 +323,7 @@ export function ChartDisplay({
         case 'pie':
           return { top: 20, right: 30, left: 30, bottom: 20 }
         default:
+          console.log("Using default margin for unknown chart type:", chartType);
           return { top: 20, right: 30, left: 60, bottom: 80 }
       }
     }

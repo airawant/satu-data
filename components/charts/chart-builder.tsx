@@ -246,40 +246,60 @@ export function ChartBuilder() {
     return selectedXAxisVariables.length > 0
   }, [selectedXAxisVariables])
 
+  // Filter chart types based on X-axis variables count
+  const availableChartTypes = useMemo(() => {
+    const xAxisCount = selectedXAxisVariables.length;
+
+    // Jika ada 2 variabel X, hanya tampilkan grafik yang mendukung 2 variabel X (tidak ada saat ini)
+    if (xAxisCount === 2) {
+      return [];
+    }
+
+    return recommendedChartTypes;
+  }, [selectedXAxisVariables.length, recommendedChartTypes]);
+
   // Handle dataset selection
   const handleSelectDataset = (datasetId: string) => {
-    setSelectedDatasetId(datasetId)
-    setSelectedXAxisVariables([])
-    setSelectedYAxisVariables([])
-    setSelectedGroupVariable(null)
-    setSelectedLabelVariable(null)
-    setSelectedChartType("")
-    setShowChart(false)
-    setCurrentStep("variables")
+    setSelectedDatasetId(datasetId);
+    // Reset semua pemilihan variabel
+    setSelectedXAxisVariables([]);
+    setSelectedYAxisVariables([]);
+    setSelectedGroupVariable(null);
+    setSelectedLabelVariable(null);
+    setSelectedChartType("");
+    setShowChart(false);
+    setCurrentStep("variables");
+
+    // Tampilkan informasi tentang batasan variabel X
+    toast({
+      title: "Info",
+      description: "Saat ini grafik hanya mendukung 1 variabel sumbu X",
+    });
   }
 
   // Handle X-axis variable selection
   const handleXAxisVariableToggle = (variableId: string) => {
     if (selectedXAxisVariables.includes(variableId)) {
-      setSelectedXAxisVariables(selectedXAxisVariables.filter((id) => id !== variableId))
+      // Jika variabel sudah dipilih, hapus dari pilihan
+      setSelectedXAxisVariables(selectedXAxisVariables.filter((id) => id !== variableId));
     } else {
-      // Limit to 2 dimensions for X-axis
-      if (selectedXAxisVariables.length < 2) {
-        setSelectedXAxisVariables([...selectedXAxisVariables, variableId])
+      // Batasi hanya 1 dimensi untuk sumbu X
+      if (selectedXAxisVariables.length < 1) {
+        setSelectedXAxisVariables([...selectedXAxisVariables, variableId]);
 
-        // If this variable was selected as group or label, deselect it
+        // Jika variabel ini dipilih sebagai grup atau label, hapus pilihan tersebut
         if (selectedGroupVariable === variableId) {
-          setSelectedGroupVariable(null)
+          setSelectedGroupVariable(null);
         }
         if (selectedLabelVariable === variableId) {
-          setSelectedLabelVariable(null)
+          setSelectedLabelVariable(null);
         }
       } else {
         toast({
           title: "Peringatan",
-          description: "Maksimal 2 variabel dapat dipilih untuk sumbu X",
+          description: "Grafik hanya mendukung 1 variabel untuk sumbu X saat ini",
           variant: "destructive",
-        })
+        });
       }
     }
   }
@@ -322,38 +342,55 @@ export function ChartBuilder() {
 
   // Handle chart type selection
   const handleChartTypeSelect = (chartType: string) => {
+    console.log("Selecting chart type:", chartType);
     setSelectedChartType(chartType);
 
     // Kosongkan chart data saat memilih jenis grafik untuk menghindari tampilan chart yang tidak valid
-    if (chartType === "pie") {
+    if (chartType === "pie" || chartType === "grouped-bar") {
+      // Untuk pie chart dan grouped-bar, jangan tampilkan chart sampai tombol "Buat Grafik" ditekan
       setShowChart(false);
       setChartData({ data: [], xAxisName: "", yAxisNames: [], groupName: "" });
     } else {
-      // Hanya otomatis generate chart jika bukan pie chart
-    setTimeout(() => {
+      // Untuk grafik lainnya, otomatis generate chart
+      setTimeout(() => {
         handleGenerateChart();
       }, 100);
-  }
+    }
   };
 
   // Handle proceeding to chart type selection
   const handleProceedToChartType = () => {
     if (canProceedToChartType) {
-      setCurrentStep("chartType")
+      // Reset chart visibility saat berpindah ke pemilihan jenis grafik
+      setShowChart(false);
 
-      // If there's only one recommended chart type, select it automatically
-      if (recommendedChartTypes.length === 1) {
-        setSelectedChartType(recommendedChartTypes[0].id)
-      } else if (recommendedChartTypes.length > 0 && !selectedChartType) {
-        // Select the first recommended chart type if none is selected
-        setSelectedChartType(recommendedChartTypes[0].id)
+      // Periksa jika ada 2 variabel X terpilih
+      if (selectedXAxisVariables.length === 2) {
+        toast({
+          title: "Peringatan",
+          description: "Grafik dengan 2 variabel sumbu X belum didukung. Silakan pilih hanya 1 variabel sumbu X.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setCurrentStep("chartType");
+
+      // If there's only one available chart type, select it automatically
+      if (availableChartTypes.length === 1) {
+        setSelectedChartType(availableChartTypes[0].id);
+        // Jangan langsung generate chart, biarkan pengguna klik tombol "Buat Grafik"
+      } else if (availableChartTypes.length > 0 && !selectedChartType) {
+        // Select the first available chart type if none is selected
+        setSelectedChartType(availableChartTypes[0].id);
+        // Jangan langsung generate chart, biarkan pengguna klik tombol "Buat Grafik"
       }
     } else {
       toast({
         title: "Peringatan",
         description: "Silakan pilih minimal satu variabel untuk sumbu X",
         variant: "destructive",
-      })
+      });
     }
   }
 
@@ -365,6 +402,17 @@ export function ChartBuilder() {
   // Generate chart data from the actual dataset
   const generateChartData = () => {
     if (!selectedDataset || !selectedXAxisVariables.length || !selectedChartType) {
+      return { data: [], xAxisName: "", yAxisNames: [], groupName: "" };
+    }
+
+    // Validasi: jika ada 2 variabel X, tampilkan pesan error dan kembalikan data kosong
+    if (selectedXAxisVariables.length > 1) {
+      console.error("Grafik dengan 2 variabel sumbu X belum didukung");
+      toast({
+        title: "Error",
+        description: "Grafik dengan 2 variabel sumbu X belum didukung saat ini",
+        variant: "destructive",
+      });
       return { data: [], xAxisName: "", yAxisNames: [], groupName: "" };
     }
 
@@ -457,8 +505,13 @@ export function ChartBuilder() {
 
       // Process data based on chart type
       try {
+        // Log untuk debugging
+        console.log("Processing chart data for type:", selectedChartType);
+        console.log("Group variable:", groupVariableName);
+        console.log("Group values:", groupValues);
+
         // Untuk grafik yang memerlukan data agregat
-        if (["bar", "line", "pie", "stacked-bar", "area", "horizontal-bar"].includes(selectedChartType)) {
+        if (["bar", "line", "pie", "stacked-bar", "grouped-bar", "area", "horizontal-bar"].includes(selectedChartType)) {
           // Jika ada variabel grup yang dipilih, agregasi berdasarkan sumbu X dan grup
           if (groupVariableName && groupValues.length > 0) {
             // Untuk stacked dan grouped bar chart, proses data secara berbeda
@@ -546,16 +599,16 @@ export function ChartBuilder() {
               if (finalResult.length > 30) {
                 const maxItems = selectedChartType === "horizontal-bar" ? 15 : 30;
 
-                if (["bar", "stacked-bar", "horizontal-bar"].includes(selectedChartType)) {
+                if (["bar", "stacked-bar", "grouped-bar", "horizontal-bar"].includes(selectedChartType)) {
                   // Untuk grafik batang, ambil data dengan nilai tertinggi
                   const sortField = yAxisVariables.length > 0 ?
                     `${yAxisVariables[0]}_${groupValues[0]}` :
-                    `count_${groupValues[0]}`;
+                    `${groupValues[0]}`;
 
                   finalResult = [...finalResult]
                     .sort((a, b) => (b[sortField] || 0) - (a[sortField] || 0))
                     .slice(0, maxItems);
-          } else {
+                } else {
                   // Untuk line/area, ambil data dengan interval yang sesuai
                   const interval = Math.ceil(finalResult.length / maxItems);
                   finalResult = finalResult.filter((_, index) => index % interval === 0);
@@ -571,7 +624,7 @@ export function ChartBuilder() {
               const generatedYAxisNames: string[] = [];
 
               if (yAxisVariables.length > 0) {
-            yAxisVariables.forEach(yVar => {
+                yAxisVariables.forEach(yVar => {
                   groupValues.forEach(gValue => {
                     generatedYAxisNames.push(`${yVar}_${gValue}`);
                   });
@@ -683,10 +736,10 @@ export function ChartBuilder() {
               // Batasi jumlah data jika terlalu banyak
               let finalResult = aggregatedData;
 
-        return {
+              return {
                 data: finalResult,
-          xAxisName: primaryXAxis,
-          yAxisNames: yAxisVariables.length ? yAxisVariables : ["count"],
+                xAxisName: primaryXAxis,
+                yAxisNames: yAxisVariables.length ? yAxisVariables : ["count"],
                 groupName: groupVariableName,
                 groupValues: groupValues,
                 labelName: labelVariableName || ""
@@ -809,12 +862,12 @@ export function ChartBuilder() {
               finalResult = topItems;
             }
             // Untuk grafik batang/garis, batasi jumlah data jika terlalu banyak
-            else if (["bar", "line", "stacked-bar", "area", "horizontal-bar"].includes(selectedChartType) && finalResult.length > 30) {
+            else if (["bar", "line", "stacked-bar", "grouped-bar", "area", "horizontal-bar"].includes(selectedChartType) && finalResult.length > 30) {
               // Untuk grafik batang horizontal, batasi lebih ketat untuk keterbacaan
               const maxItems = selectedChartType === "horizontal-bar" ? 15 : 30;
 
               // Ambil data sesuai dengan jenis grafik (bar: tertinggi, line/area: berurutan)
-              if (["bar", "stacked-bar", "horizontal-bar"].includes(selectedChartType)) {
+              if (["bar", "stacked-bar", "grouped-bar", "horizontal-bar"].includes(selectedChartType)) {
                 const sortField = yAxisVariables.length > 0 ? yAxisVariables[0] : "count";
                 finalResult = [...finalResult].sort((a, b) => (b[sortField] || 0) - (a[sortField] || 0)).slice(0, maxItems);
               } else {
@@ -943,6 +996,12 @@ export function ChartBuilder() {
   // Handle generate chart
   const handleGenerateChart = () => {
     try {
+      console.log("=== Generating chart ===");
+      console.log("Chart type:", selectedChartType);
+      console.log("X-axis variables:", selectedXAxisVariables);
+      console.log("Y-axis variables:", selectedYAxisVariables);
+      console.log("Group variable:", selectedGroupVariable);
+
       if (!selectedDataset) {
         toast({
           title: "Error",
@@ -972,6 +1031,7 @@ export function ChartBuilder() {
 
       // Generate chart data
       const data = generateChartData();
+      console.log("Generated chart data:", data);
 
       // Validasi khusus untuk grafik lingkaran
       if (selectedChartType === "pie") {
@@ -993,15 +1053,29 @@ export function ChartBuilder() {
       }
 
       if (data && data.data && Array.isArray(data.data)) {
+        console.log(`Setting chart data (${data.data.length} items) and showing chart`);
+
+        // Pastikan state diperbarui dengan benar
         setChartData(data);
         setShowChart(true);
         setActiveTab("chart");
 
+        // Log untuk memastikan componen akan dirender ulang dengan benar
+        setTimeout(() => {
+          console.log("Current state after update:", {
+            showChart,
+            activeTab,
+            chartType: selectedChartType,
+            dataLength: chartData.data?.length || 0
+          });
+        }, 10);
+
         toast({
           title: "Berhasil",
-          description: "Grafik berhasil dibuat",
+          description: `Grafik ${selectedChartType === "grouped-bar" ? "batang berkelompok" : "berhasil"} dibuat`,
         });
       } else {
+        console.error("Failed to generate chart data:", data);
         toast({
           title: "Error",
           description: "Gagal membuat grafik. Data tidak valid atau kosong.",
@@ -1096,10 +1170,19 @@ export function ChartBuilder() {
                           <div>
                             <div className="flex justify-between items-center mb-2">
                               <Label className="text-sm font-medium">Variabel Sumbu X (Dimensi)</Label>
-                              <Badge variant="outline" className="text-xs">
-                                {selectedXAxisVariables.length}/2 dipilih
+                              <Badge
+                                variant={selectedXAxisVariables.length === 2 ? "destructive" : "outline"}
+                                className="text-xs"
+                              >
+                                {selectedXAxisVariables.length}/1 dipilih
+                                {selectedXAxisVariables.length > 1 && " (tidak didukung)"}
                               </Badge>
                             </div>
+                            {selectedXAxisVariables.length > 1 && (
+                              <p className="text-xs text-destructive mb-2">
+                                Grafik dengan 2 variabel sumbu X belum didukung. Pilih hanya 1 variabel.
+                              </p>
+                            )}
                             <div className="border rounded-md p-3 max-h-[150px] overflow-y-auto space-y-2">
                               {dimensions.length === 0 ? (
                                 <p className="text-sm text-muted-foreground text-center">Tidak ada dimensi tersedia</p>
@@ -1109,7 +1192,17 @@ export function ChartBuilder() {
                                     <Checkbox
                                       id={`x-${dimension.id}`}
                                       checked={selectedXAxisVariables.includes(dimension.id)}
-                                      onCheckedChange={() => handleXAxisVariableToggle(dimension.id)}
+                                      onCheckedChange={() => {
+                                        // Jika sudah ada 1 variabel terpilih dan ini variabel baru, tampilkan peringatan
+                                        if (!selectedXAxisVariables.includes(dimension.id) && selectedXAxisVariables.length >= 1) {
+                                          toast({
+                                            title: "Peringatan",
+                                            description: "Grafik dengan 2 variabel sumbu X belum didukung. Silakan pilih hanya 1 variabel.",
+                                            variant: "destructive",
+                                          });
+                                        }
+                                        handleXAxisVariableToggle(dimension.id);
+                                      }}
                                     />
                                     <Label htmlFor={`x-${dimension.id}`} className="text-sm cursor-pointer">
                                       {dimension.name}
@@ -1300,7 +1393,13 @@ export function ChartBuilder() {
                           </div>
 
                           {/* Chart Type Selection */}
-                          {recommendedChartTypes.length === 0 ? (
+                          {selectedXAxisVariables.length === 2 ? (
+                            <div className="p-4 border rounded-md bg-amber-50 text-amber-700">
+                              <p className="text-sm">
+                                Grafik dengan 2 variabel sumbu X belum didukung saat ini. Silakan kembali dan pilih hanya 1 variabel untuk sumbu X.
+                              </p>
+                            </div>
+                          ) : availableChartTypes.length === 0 ? (
                             <div className="p-4 border rounded-md bg-amber-50 text-amber-700">
                               <p className="text-sm">
                                 Tidak ada jenis grafik yang sesuai dengan variabel yang dipilih. Silakan kembali dan
@@ -1309,7 +1408,7 @@ export function ChartBuilder() {
                             </div>
                           ) : (
                             <div className="grid grid-cols-2 gap-2">
-                              {recommendedChartTypes.map((chartType) => (
+                              {availableChartTypes.map((chartType) => (
                                 <div key={chartType.id} className="relative">
                                   <button
                                     type="button"
@@ -1360,10 +1459,15 @@ export function ChartBuilder() {
                             <Button
                               className="w-full bg-primary hover:bg-primary/90"
                               onClick={handleGenerateChart}
-                              disabled={!selectedChartType}
+                              disabled={!selectedChartType || selectedXAxisVariables.length === 2}
                             >
                               Buat Grafik
                             </Button>
+                            {selectedXAxisVariables.length === 2 && (
+                              <p className="text-xs text-destructive mt-2 text-center">
+                                Grafik dengan 2 variabel sumbu X belum didukung
+                              </p>
+                            )}
                           </div>
                         </>
                       )}
