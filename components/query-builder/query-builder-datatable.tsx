@@ -72,6 +72,7 @@ type PivotColumn = {
   name: string
   type: string
   year?: string
+  yearDerivative?: string
   characteristicName?: string
   characteristicValue?: string
   aggregationMethod?: string
@@ -1007,8 +1008,15 @@ export function QueryBuilderDataTable() {
       return { data: [], columns: [] };
     }
 
+    // Temukan variabel turunan tahun
+    const yearDerivativeVariable = selectedDataset?.variables.find(
+      (v) => v.name.toLowerCase().includes("triwulan") ||
+             v.name.toLowerCase().includes("semester") ||
+             v.name.toLowerCase().includes("bulan")
+    );
+
     // Filter data based on selected years - pastikan setiap row valid sebelum memfilter
-    const filteredData = dataArray.filter((row) =>
+    let filteredData = dataArray.filter((row) =>
       row && // pastikan row tidak null/undefined
       row[yearVariable.name] !== undefined &&
       row[yearVariable.name] !== null &&
@@ -1018,11 +1026,23 @@ export function QueryBuilderDataTable() {
       String(row[yearVariable.name]) !== "undefined"
     );
 
+    // Filter berdasarkan turunan tahun jika dipilih
+    if (yearDerivativeVariable && selectedYearDerivatives.length > 0) {
+      console.log("Filtering by year derivatives:", selectedYearDerivatives);
+      filteredData = filteredData.filter((row) =>
+        row &&
+        row[yearDerivativeVariable.name] !== undefined &&
+        row[yearDerivativeVariable.name] !== null &&
+        row[yearDerivativeVariable.name] !== "" &&
+        selectedYearDerivatives.includes(String(row[yearDerivativeVariable.name]))
+      );
+    }
+
     if (filteredData.length === 0) {
-      console.warn("No data after filtering by selected years");
+      console.warn("No data after filtering by selected years and/or year derivatives");
       toast({
         title: "Tidak Ada Data",
-        description: "Tidak ada data yang sesuai dengan tahun yang dipilih.",
+        description: "Tidak ada data yang sesuai dengan tahun dan turunan tahun yang dipilih.",
         variant: "destructive",
       });
       return { data: [], columns: [] };
@@ -1336,30 +1356,42 @@ export function QueryBuilderDataTable() {
       });
     });
 
-    // Add characteristic columns for each year
+    // Add characteristic columns for each year and year derivative
     const characteristicValueColumns: PivotColumn[] = [];
+
+    // Temukan semua turunan tahun yang telah difilter
+    const yearDerivativeValues = yearDerivativeVariable && selectedYearDerivatives.length > 0 ?
+      selectedYearDerivatives :
+      [""];  // Gunakan array dengan string kosong jika tidak ada turunan tahun
 
     selectedYears.forEach((year) => {
       // Skip null or undefined years
       if (!year || year === "null" || year === "undefined") return;
 
-      Object.keys(characteristicsByVariable).forEach((variableName) => {
-        const characteristicValues = characteristicsByVariable[variableName];
+      yearDerivativeValues.forEach((derivative) => {
+        Object.keys(characteristicsByVariable).forEach((variableName) => {
+          const characteristicValues = characteristicsByVariable[variableName];
 
-        if (!characteristicValues || characteristicValues.length === 0) {
-          console.log(`No selected characteristic values for ${variableName}, skipping`);
-          return; // Skip if no characteristic values
-        }
+          if (!characteristicValues || characteristicValues.length === 0) {
+            console.log(`No selected characteristic values for ${variableName} in legacy mode, skipping`);
+            return; // Skip if no characteristic values
+          }
 
-        characteristicValues.forEach((characteristic) => {
-          characteristicValueColumns.push({
-            id: `${year}_${variableName}_${characteristic.name}`,
-            name: characteristic.name,
-            year,
-            characteristicName: variableName,
-            characteristicValue: characteristic.name,
-            type: characteristic.type || "count",
-            aggregationMethod,
+          characteristicValues.forEach((characteristic) => {
+            const columnId = derivative ?
+              `${year}_${derivative}_${variableName}_${characteristic.name}` :
+              `${year}_${variableName}_${characteristic.name}`;
+
+            characteristicValueColumns.push({
+              id: columnId,
+              name: characteristic.name,
+              year,
+              yearDerivative: derivative || undefined,
+              characteristicName: variableName,
+              characteristicValue: characteristic.name,
+              type: characteristic.type || "count",
+              aggregationMethod,
+            });
           });
         });
       });
@@ -1425,7 +1457,7 @@ export function QueryBuilderDataTable() {
 
       // For each characteristic column, calculate the value
       characteristicValueColumns.forEach((column) => {
-        const { year, characteristicName, characteristicValue } = column;
+        const { year, yearDerivative, characteristicName, characteristicValue } = column;
 
         if (!year || !characteristicName || !characteristicValue) {
           console.warn("Missing column properties", column);
@@ -1433,13 +1465,19 @@ export function QueryBuilderDataTable() {
           return;
         }
 
-        // Filter data for this year and row combination - dengan penanganan null/undefined
+        // Filter data for this year, year derivative, and row combination - dengan penanganan null/undefined
         const filteredRows = filteredData.filter((row) => {
           if (!row) return false; // Skip invalid rows
 
           // Skip if row doesn't have year data
           const yearVal = row[yearVariable.name];
           if (yearVal === undefined || yearVal === null || String(yearVal) !== year) return false;
+
+          // Filter by year derivative if specified
+          if (yearDerivative && yearDerivativeVariable) {
+            const derivativeVal = row[yearDerivativeVariable.name];
+            if (derivativeVal === undefined || derivativeVal === null || String(derivativeVal) !== yearDerivative) return false;
+          }
 
           // Check if row matches the current combination
           if (!Object.keys(combination).every((variable) => {
@@ -1458,7 +1496,7 @@ export function QueryBuilderDataTable() {
         let cellValue = 0;
 
         // Tambahkan log debugging
-        console.log(`Checking ${year} - ${characteristicName} - ${characteristicValue}: ${filteredRows.length} rows matched`);
+        console.log(`Checking ${year} ${yearDerivative ? `- ${yearDerivative}` : ""} - ${characteristicName} - ${characteristicValue}: ${filteredRows.length} rows matched`);
 
         if (aggregationMethod === "count") {
           // Count rows
@@ -1560,8 +1598,15 @@ export function QueryBuilderDataTable() {
   const generatePivotTableLegacy = (dataArray: any[], yearVariable: DatasetVariable) => {
     console.log("Generating pivot table with legacy mode");
 
+    // Temukan variabel turunan tahun
+    const yearDerivativeVariable = selectedDataset?.variables.find(
+      (v) => v.name.toLowerCase().includes("triwulan") ||
+             v.name.toLowerCase().includes("semester") ||
+             v.name.toLowerCase().includes("bulan")
+    );
+
     // Filter data based on selected years - pastikan setiap row valid sebelum memfilter
-    const filteredData = dataArray.filter((row) =>
+    let filteredData = dataArray.filter((row) =>
       row && // pastikan row tidak null/undefined
       row[yearVariable.name] !== undefined &&
       row[yearVariable.name] !== null &&
@@ -1571,11 +1616,23 @@ export function QueryBuilderDataTable() {
       String(row[yearVariable.name]) !== "undefined"
     );
 
+    // Filter berdasarkan turunan tahun jika dipilih
+    if (yearDerivativeVariable && selectedYearDerivatives.length > 0) {
+      console.log("Legacy mode: Filtering by year derivatives:", selectedYearDerivatives);
+      filteredData = filteredData.filter((row) =>
+        row &&
+        row[yearDerivativeVariable.name] !== undefined &&
+        row[yearDerivativeVariable.name] !== null &&
+        row[yearDerivativeVariable.name] !== "" &&
+        selectedYearDerivatives.includes(String(row[yearDerivativeVariable.name]))
+      );
+    }
+
     if (filteredData.length === 0) {
-      console.warn("No data after filtering by selected years in legacy mode");
+      console.warn("No data after filtering by selected years and/or year derivatives in legacy mode");
       toast({
         title: "Tidak Ada Data",
-        description: "Tidak ada data yang sesuai dengan tahun yang dipilih.",
+        description: "Tidak ada data yang sesuai dengan tahun dan turunan tahun yang dipilih.",
         variant: "destructive",
       });
       return { data: [], columns: [] };
@@ -1775,7 +1832,7 @@ export function QueryBuilderDataTable() {
       });
     });
 
-    // Add characteristic columns for each year
+    // Add characteristic columns for each year and year derivative
     const characteristicValueColumns: PivotColumn[] = [];
 
     selectedYears.forEach((year) => {
@@ -1870,7 +1927,7 @@ export function QueryBuilderDataTable() {
 
       // For each characteristic column, calculate the value
       characteristicValueColumns.forEach((column) => {
-        const { year, characteristicName, characteristicValue } = column;
+        const { year, yearDerivative, characteristicName, characteristicValue } = column;
 
         if (!year || !characteristicName || !characteristicValue) {
           console.warn("Missing column properties", column);
@@ -1878,13 +1935,19 @@ export function QueryBuilderDataTable() {
           return;
         }
 
-        // Filter data for this year and row combination - dengan penanganan null/undefined
+        // Filter data for this year, year derivative, and row combination - dengan penanganan null/undefined
         const filteredRows = filteredData.filter((row) => {
           if (!row) return false; // Skip invalid rows
 
           // Skip if row doesn't have year data
           const yearVal = row[yearVariable.name];
           if (yearVal === undefined || yearVal === null || String(yearVal) !== year) return false;
+
+          // Filter by year derivative if specified
+          if (yearDerivative && yearDerivativeVariable) {
+            const derivativeVal = row[yearDerivativeVariable.name];
+            if (derivativeVal === undefined || derivativeVal === null || String(derivativeVal) !== yearDerivative) return false;
+          }
 
           // Check if row matches the current combination
           if (!Object.keys(combination).every((variable) => {
@@ -1901,7 +1964,7 @@ export function QueryBuilderDataTable() {
         });
 
         // Tambahkan log debugging
-        console.log(`Legacy mode - Checking ${year} - ${characteristicName} - ${characteristicValue}: ${filteredRows.length} rows matched`);
+        console.log(`Legacy mode - Checking ${year} ${yearDerivative ? `- ${yearDerivative}` : ""} - ${characteristicName} - ${characteristicValue}: ${filteredRows.length} rows matched`);
 
         let cellValue = 0;
 
@@ -2196,23 +2259,86 @@ export function QueryBuilderDataTable() {
     }
   }
 
-  // Fungsi untuk mendapatkan header tahun
+  // Fungsi untuk mendapatkan header tahun dengan turunan tahun
   const getYearHeaders = () => {
-    const yearHeaders: Record<string, { year: string; columns: PivotColumn[] }> = {}
+    // Kumpulkan semua tahun unik
+    const uniqueYears = new Set<string>();
 
     pivotColumns
       .filter(col => col.type !== "rowTitle" && col.type !== "total")
-      .forEach((column) => {
+      .forEach(column => {
         if (column.year) {
-        if (!yearHeaders[column.year]) {
-          yearHeaders[column.year] = { year: column.year, columns: [] }
+          uniqueYears.add(column.year);
         }
-        yearHeaders[column.year].columns.push(column)
-      }
-    })
+      });
 
-    return Object.values(yearHeaders)
-  }
+    // Buat struktur untuk header tahun
+    const yearHeaders: Record<string, {
+      year: string;
+      derivativeColumns: Record<string, PivotColumn[]>;
+      totalColumns: number;
+    }> = {};
+
+    // Isi struktur header dengan kolom-kolom yang sesuai
+    uniqueYears.forEach(year => {
+      const yearColumns = pivotColumns.filter(col =>
+        col.type !== "rowTitle" &&
+        col.type !== "total" &&
+        col.year === year
+      );
+
+      const derivativeColumns: Record<string, PivotColumn[]> = {};
+
+      // Kelompokkan kolom berdasarkan turunan tahun
+      yearColumns.forEach(column => {
+        const derivativeKey = column.yearDerivative || "none";
+
+        if (!derivativeColumns[derivativeKey]) {
+          derivativeColumns[derivativeKey] = [];
+        }
+
+        derivativeColumns[derivativeKey].push(column);
+      });
+
+      // Hitung total kolom untuk tahun ini
+      const totalColumns = yearColumns.length;
+
+      yearHeaders[year] = {
+        year,
+        derivativeColumns,
+        totalColumns,
+      };
+    });
+
+    return yearHeaders;
+  };
+
+  // Fungsi untuk mendapatkan semua turunan tahun unik yang digunakan
+  const getUniqueDerivatives = () => {
+    const uniqueDerivatives = new Set<string>();
+
+    pivotColumns
+      .filter(col => col.type !== "rowTitle" && col.type !== "total")
+      .forEach(column => {
+        if (column.yearDerivative) {
+          uniqueDerivatives.add(column.yearDerivative);
+        } else {
+          uniqueDerivatives.add("none");
+        }
+      });
+
+    return Array.from(uniqueDerivatives);
+  };
+
+  // Fungsi untuk mendapatkan kolom karakteristik berdasarkan tahun dan turunan tahun
+  const getCharacteristicColumns = (year: string, derivative: string) => {
+    return pivotColumns.filter(col =>
+      col.type !== "rowTitle" &&
+      col.type !== "total" &&
+      col.year === year &&
+      (derivative === "none" ? !col.yearDerivative : col.yearDerivative === derivative)
+    );
+  };
 
   // Fungsi untuk mendapatkan header karakteristik
   const getCharacteristicHeaders = () => {
@@ -2793,7 +2919,7 @@ export function QueryBuilderDataTable() {
                       .map((column) => (
                         <th
                           key={`header-row-${column.id}`}
-                          rowSpan={2}
+                          rowSpan={3}
                           className="border p-2 bg-blue-900 text-white font-medium text-sm sticky left-0 z-20"
                         >
                           {column.name}
@@ -2801,10 +2927,10 @@ export function QueryBuilderDataTable() {
                       ))}
 
                     {/* Kolom untuk tahun (merged cells) */}
-                    {getYearHeaders().map((yearHeader) => (
+                    {Object.values(getYearHeaders()).map((yearHeader) => (
                       <th
                         key={`header-year-${yearHeader.year}`}
-                        colSpan={yearHeader.columns.length}
+                        colSpan={yearHeader.totalColumns}
                         className="border p-2 bg-blue-900 text-white font-medium text-sm text-center"
                       >
                         {yearHeader.year}
@@ -2812,24 +2938,40 @@ export function QueryBuilderDataTable() {
                     ))}
 
                     {/* Kolom untuk total */}
-                    <th rowSpan={2} className="border p-2 bg-blue-700 text-white font-medium text-sm text-center">
+                    <th rowSpan={3} className="border p-2 bg-blue-700 text-white font-medium text-sm text-center">
                       Total
                     </th>
                   </tr>
 
-                  {/* Header baris kedua - Karakteristik */}
+                  {/* Header baris kedua - Turunan Tahun */}
                   <tr>
-                    {/* Kolom untuk karakteristik - Pastikan urutan sama dengan data */}
-                    {pivotColumns
-                      .filter((col) => col.type !== "rowTitle" && col.type !== "total")
-                      .map((column) => (
+                    {Object.entries(getYearHeaders()).map(([year, yearHeader]) => {
+                      return Object.entries(yearHeader.derivativeColumns).map(([derivative, columns]) => (
                         <th
-                          key={`subheader-${column.id}`}
+                          key={`header-derivative-${year}-${derivative}`}
+                          colSpan={columns.length}
                           className="border p-2 bg-blue-800 text-white font-medium text-sm text-center"
                         >
-                          {column.characteristicValue}
+                          {derivative === "none" ? "Semua" : derivative}
                         </th>
-                      ))}
+                      ));
+                    })}
+                  </tr>
+
+                  {/* Header baris ketiga - Karakteristik */}
+                  <tr>
+                    {Object.entries(getYearHeaders()).map(([year, yearHeader]) => {
+                      return Object.entries(yearHeader.derivativeColumns).flatMap(([derivative, columns]) => {
+                        return columns.map(column => (
+                          <th
+                            key={`subheader-${column.id}`}
+                            className="border p-2 bg-blue-700 text-white font-medium text-xs text-center"
+                          >
+                            {column.characteristicValue}
+                          </th>
+                        ));
+                      });
+                    })}
                   </tr>
                 </thead>
                 <tbody>
