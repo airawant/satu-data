@@ -352,10 +352,10 @@ export function ChartBuilder() {
       setChartData({ data: [], xAxisName: "", yAxisNames: [], groupName: "" });
     } else {
       // Untuk grafik lainnya, otomatis generate chart
-      setTimeout(() => {
+    setTimeout(() => {
         handleGenerateChart();
       }, 100);
-    }
+  }
   };
 
   // Handle proceeding to chart type selection
@@ -608,7 +608,7 @@ export function ChartBuilder() {
                   finalResult = [...finalResult]
                     .sort((a, b) => (b[sortField] || 0) - (a[sortField] || 0))
                     .slice(0, maxItems);
-                } else {
+          } else {
                   // Untuk line/area, ambil data dengan interval yang sesuai
                   const interval = Math.ceil(finalResult.length / maxItems);
                   finalResult = finalResult.filter((_, index) => index % interval === 0);
@@ -624,7 +624,7 @@ export function ChartBuilder() {
               const generatedYAxisNames: string[] = [];
 
               if (yAxisVariables.length > 0) {
-                yAxisVariables.forEach(yVar => {
+            yAxisVariables.forEach(yVar => {
                   groupValues.forEach(gValue => {
                     generatedYAxisNames.push(`${yVar}_${gValue}`);
                   });
@@ -736,10 +736,10 @@ export function ChartBuilder() {
               // Batasi jumlah data jika terlalu banyak
               let finalResult = aggregatedData;
 
-              return {
+        return {
                 data: finalResult,
-                xAxisName: primaryXAxis,
-                yAxisNames: yAxisVariables.length ? yAxisVariables : ["count"],
+          xAxisName: primaryXAxis,
+          yAxisNames: yAxisVariables.length ? yAxisVariables : ["count"],
                 groupName: groupVariableName,
                 groupValues: groupValues,
                 labelName: labelVariableName || ""

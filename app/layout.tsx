@@ -7,6 +7,7 @@ import { DatasetProvider } from "@/contexts/dataset-context"
 import { SavedItemsProvider } from "@/contexts/saved-items-context"
 import { AuthProvider } from "@/contexts/auth-context"
 import { Toaster } from "@/components/ui/toaster"
+import Footer from "@/components/footer"
 
 const fontSans = FontSans({
   subsets: ["latin"],
@@ -33,7 +34,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <AuthProvider>
             <DatasetProvider>
               <SavedItemsProvider>
-                {children}
+                <main className="min-h-screen flex flex-col">
+                  <div className="flex-grow">
+                    {children}
+                  </div>
+                  <Footer />
+                </main>
               </SavedItemsProvider>
             </DatasetProvider>
           </AuthProvider>

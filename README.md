@@ -33,6 +33,21 @@ File logo yang digunakan:
 - Dashboard analitik
 - Pengelolaan dataset
 - Eksplorasi data
+- Footer responsif dengan informasi instansi dan media sosial
+
+## Komponen Footer
+
+Footer aplikasi diimplementasikan sebagai client component (`"use client"`) dan memiliki fitur-fitur berikut:
+
+- **Informasi Kantor** - Menampilkan alamat, kontak telepon, dan email Kemenag Kota Tanjungpinang
+- **Link Terkait** - Tautan ke portal terkait seperti Portal Satu Data Indonesia dan Satu Data Kementerian Agama RI
+- **Media Sosial** - Tautan ke akun media sosial resmi (Facebook, Twitter, Instagram, YouTube)
+- **Newsletter** - Form berlangganan untuk mendapatkan update terbaru via email
+- **Layanan Pengaduan** - Tautan ke platform LAPOR! untuk pengaduan masyarakat
+- **Tombol Back-to-Top** - Tombol interaktif yang muncul saat pengguna men-scroll ke bawah
+- **Desain Responsif** - Tampilan yang optimal pada berbagai ukuran layar (desktop dan mobile)
+
+Footer ini menggunakan React Hooks (`useState` dan `useEffect`) untuk mengelola status tampilan tombol back-to-top dan event listener scroll.
 
 ## Pengembangan
 
