@@ -12,8 +12,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 if (process.env.NEXT_PUBLIC_SUPABASE_DEBUG === 'true') {
-  console.log('Supabase URL configured:', supabaseUrl);
-  console.log('Supabase Anon Key configured:', supabaseAnonKey ? '[KEY CONFIGURED]' : '[KEY MISSING]');
+//   console.log('Supabase URL configured:', supabaseUrl);
+//   console.log('Supabase Anon Key configured:', supabaseAnonKey ? '[KEY CONFIGURED]' : '[KEY MISSING]');
 }
 
 // Konfigurasi klien untuk browser/client-side
