@@ -342,7 +342,6 @@ export function ChartBuilder() {
 
   // Handle chart type selection
   const handleChartTypeSelect = (chartType: string) => {
-    console.log("Selecting chart type:", chartType);
     setSelectedChartType(chartType);
 
     // Kosongkan chart data saat memilih jenis grafik untuk menghindari tampilan chart yang tidak valid
@@ -499,17 +498,10 @@ export function ChartBuilder() {
 
         // Sort nilai grup
         groupValues.sort();
-
-        console.log(`Nilai unik pada variabel grup ${groupVariableName}:`, groupValues);
       }
 
       // Process data based on chart type
       try {
-        // Log untuk debugging
-        console.log("Processing chart data for type:", selectedChartType);
-        console.log("Group variable:", groupVariableName);
-        console.log("Group values:", groupValues);
-
         // Untuk grafik yang memerlukan data agregat
         if (["bar", "line", "pie", "stacked-bar", "grouped-bar", "area", "horizontal-bar"].includes(selectedChartType)) {
           // Jika ada variabel grup yang dipilih, agregasi berdasarkan sumbu X dan grup
@@ -996,12 +988,6 @@ export function ChartBuilder() {
   // Handle generate chart
   const handleGenerateChart = () => {
     try {
-      console.log("=== Generating chart ===");
-      console.log("Chart type:", selectedChartType);
-      console.log("X-axis variables:", selectedXAxisVariables);
-      console.log("Y-axis variables:", selectedYAxisVariables);
-      console.log("Group variable:", selectedGroupVariable);
-
       if (!selectedDataset) {
         toast({
           title: "Error",
@@ -1031,7 +1017,6 @@ export function ChartBuilder() {
 
       // Generate chart data
       const data = generateChartData();
-      console.log("Generated chart data:", data);
 
       // Validasi khusus untuk grafik lingkaran
       if (selectedChartType === "pie") {
@@ -1053,7 +1038,6 @@ export function ChartBuilder() {
       }
 
       if (data && data.data && Array.isArray(data.data)) {
-        console.log(`Setting chart data (${data.data.length} items) and showing chart`);
 
         // Pastikan state diperbarui dengan benar
         setChartData(data);

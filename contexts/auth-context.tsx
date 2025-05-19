@@ -44,17 +44,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
 
-  console.log('Auth state:', {
-    user: !!user,
-    userId: user?.id?.substring(0, 5),
-    adminData: !!adminData,
-    isLoading,
-    sessionChecked,
-    pathname,
-    mounted: mountedRef.current,
-    initialLoadDone: initialLoadDoneRef.current,
-    timestamp: new Date().toISOString()
-  })
 
   // Fungsi untuk menyimpan status auth ke localStorage
   const cacheAuthState = useCallback((userData: User | null, adminUserData: AdminUser | null) => {
@@ -74,8 +63,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem(USER_DETAILS_KEY);
         localStorage.removeItem(ADMIN_DETAILS_KEY);
       }
-
-      console.log('Auth state cached in localStorage');
     } catch (error) {
       console.error('Error caching auth state:', error);
     }
@@ -94,7 +81,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const isExpired = Date.now() - cacheTime > CACHE_EXPIRY_TIME;
 
         if (!isExpired) {
-          console.log('Using cached auth state, age:', Math.round((Date.now() - cacheTime) / 1000), 'seconds');
 
           // Atur state sessionChecked dari cache
           setSessionChecked(isSessionChecked);
@@ -122,7 +108,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return true; // Cache berhasil dimuat
           }
         } else {
-          console.log('Cached auth state expired, age:', Math.round((Date.now() - cacheTime) / 1000), 'seconds');
           // Hapus cache yang sudah kedaluwarsa
           localStorage.removeItem(AUTH_STATE_KEY);
           localStorage.removeItem(AUTH_STATE_TIMESTAMP_KEY);
@@ -151,7 +136,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!mountedRef.current) return null
 
     try {
-      console.log('Fetching admin data for user:', user.id)
       const { data, error } = await supabase
         .from("admin_users")
         .select("*")
@@ -162,8 +146,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error("Error fetching admin data:", error)
         return null
       }
-
-      console.log('Admin data fetched:', data)
       return data as AdminUser
     } catch (error) {
       console.error("Error fetching admin data:", error)
@@ -176,27 +158,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!mountedRef.current) return
 
     if (sessionChecked && !isLoading && !user && pathname?.includes('/admin')) {
-      console.log('Redirecting to login from auth context - no user found')
       // Gunakan window.location.replace alih-alih window.location.href untuk navigasi yang lebih reliable
       window.location.replace('/login?bypass=true')
     }
   }, [user, isLoading, pathname, sessionChecked])
 
   useEffect(() => {
-    console.log('Setting up auth state listener')
 
     // Coba muat status auth dari cache terlebih dahulu
     const cacheLoaded = loadCachedAuthState();
 
     if (cacheLoaded) {
-      console.log('Using cached authentication state');
       setIsLoading(false);
       initialLoadDoneRef.current = true;
     }
 
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, !!session);
 
       if (!mountedRef.current) return;
 
@@ -235,16 +213,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const checkSession = async () => {
       // Jika cache sudah dimuat, skip pemeriksaan session awal
       if (cacheLoaded && initialLoadDoneRef.current) {
-        console.log('Skipping initial session check - using cached state');
         return;
       }
 
-      console.log('Checking initial session')
       try {
         if (!mountedRef.current) return
 
         const { data: { session } } = await supabase.auth.getSession()
-        console.log('Initial session check:', !!session)
 
         if (!mountedRef.current) return
 
@@ -261,7 +236,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (pathname === '/login') {
               setTimeout(() => {
                 if (mountedRef.current) {
-                  console.log('Already logged in on login page, redirecting to dashboard')
                   window.location.replace('/admin/dashboard')
                 }
               }, 100)
@@ -285,7 +259,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Buat timeout untuk memastikan state tidak stuck loading
     const loadingTimeout = setTimeout(() => {
       if (isLoading && mountedRef.current) {
-        console.log('Loading timeout triggered - resetting loading state')
         setIsLoading(false)
         setSessionChecked(true)
         initialLoadDoneRef.current = true
@@ -306,7 +279,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Metode untuk refresh sesi secara manual
   const refreshSession = useCallback(async () => {
-    console.log('Manual refresh session requested');
     if (!mountedRef.current) return;
 
     setIsLoading(true);
@@ -321,7 +293,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setAdminData(null);
       } else if (data?.session?.user) {
-        console.log('Session refreshed successfully');
         setUser(data.session.user);
         const adminData = await fetchUserData(data.session.user);
         if (mountedRef.current) {
@@ -347,8 +318,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     if (!mountedRef.current) return { error: { message: "Component unmounted" } }
-
-    console.log('Signing in with email:', email)
     setIsLoading(true)
 
     try {
@@ -371,7 +340,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!mountedRef.current) return { error: null }
 
-      console.log('Sign in result:', { success: !!data?.user, error: !!error })
 
       if (error) {
         return { error }
@@ -384,7 +352,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!mountedRef.current) return { error: null }
 
         if (!adminData) {
-          console.log('User not found in admin_users table')
           await supabase.auth.signOut()
           cacheAuthState(null, null); // Reset cache
           return { error: { message: "Akun tidak memiliki akses admin" } }
@@ -424,8 +391,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     if (!mountedRef.current) return
-
-    console.log('Signing out')
     setIsLoading(true)
 
     try {

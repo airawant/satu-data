@@ -307,7 +307,6 @@ export function ChartDisplay({
 
     // Tentukan margin berdasarkan jenis grafik
     const getMargin = (chartType: string) => {
-      console.log("Getting margin for chart type:", chartType);
 
       switch (chartType) {
         case 'horizontal-bar':

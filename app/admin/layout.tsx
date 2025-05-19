@@ -22,21 +22,6 @@ function AdminLayoutInternal({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const hasBypass = searchParams?.has('bypass')
 
-  // Log status komponen dan autentikasi untuk debugging
-  console.log('Admin layout status:', {
-    user: !!user,
-    userId: user?.id?.substring(0, 5) || 'none',
-    isLoading,
-    isRedirecting,
-    layoutLoaded,
-    layoutInitialized,
-    redirectAttempt: redirectAttemptRef.current,
-    mounted: mountedRef.current,
-    pathname,
-    hasBypass,
-    timestamp: new Date().toISOString(),
-  })
-
   // Inisialisasi layout yang hanya berjalan sekali
   useEffect(() => {
     if (layoutInitialized) return;
@@ -46,11 +31,8 @@ function AdminLayoutInternal({ children }: { children: React.ReactNode }) {
       const lastLoadState = localStorage.getItem(LAYOUT_LOADED_KEY) === 'true';
       const lastAuthStatus = localStorage.getItem(LAST_AUTH_STATUS_KEY);
 
-      console.log('Layout initial state:', { lastLoadState, lastAuthStatus });
-
       // Jika layout pernah dimuat dan status auth sama, gunakan cache
       if (lastLoadState && lastAuthStatus === String(!!user)) {
-        console.log('Using cached layout state');
         setLayoutLoaded(true);
       }
     } catch (error) {
@@ -87,7 +69,6 @@ function AdminLayoutInternal({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const addBypassOnce = () => {
       if (!searchParams?.has('bypass') && pathname?.startsWith('/admin') && mountedRef.current) {
-        console.log('Adding bypass parameter to URL');
         const currentPath = pathname + (searchParams?.toString() ? '?' + searchParams.toString() + '&bypass=true' : '?bypass=true');
         window.history.replaceState(null, '', currentPath);
         return true;
@@ -104,7 +85,6 @@ function AdminLayoutInternal({ children }: { children: React.ReactNode }) {
   // Memperbarui status layout saat autentikasi selesai
   useEffect(() => {
     if (!isLoading && layoutInitialized && !layoutLoaded) {
-      console.log('Authentication check complete, updating layout state');
       setLayoutLoaded(true);
     }
   }, [isLoading, layoutInitialized, layoutLoaded]);
@@ -113,7 +93,6 @@ function AdminLayoutInternal({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && user) {
-        console.log('Tab became visible, refreshing session silently');
         // Refresh sesi tanpa mengubah UI loading state
         refreshSession().catch(console.error);
       }
@@ -137,7 +116,6 @@ function AdminLayoutInternal({ children }: { children: React.ReactNode }) {
     // 4. Path dimulai dengan /admin
     // 5. Tidak ada parameter bypass (biarkan middleware menangani jika ada bypass)
     if (layoutInitialized && !isLoading && !user && pathname?.includes('/admin') && !hasBypass) {
-      console.log('Redirecting to login from admin layout - no user found')
       setIsRedirecting(true);
       redirectAttemptRef.current += 1;
 

@@ -6,7 +6,6 @@ import type { NextRequest } from 'next/server'
 export default async function middleware(req: NextRequest) {
   // Jika ada query parameter bypass, biarkan navigasi berjalan normal
   if (req.nextUrl.searchParams.has('bypass')) {
-    console.log('Bypass activated, allowing navigation to', req.nextUrl.pathname)
     return NextResponse.next()
   }
 
@@ -17,9 +16,6 @@ export default async function middleware(req: NextRequest) {
   try {
     // Periksa apakah user sudah login
     const { data: { session }, error } = await supabase.auth.getSession()
-
-    // Log session status (hanya di development)
-    console.log(`Middleware checking ${req.nextUrl.pathname} - session:`, !!session)
 
     if (error) {
       console.error('Middleware session error:', error.message)
@@ -45,7 +41,6 @@ export default async function middleware(req: NextRequest) {
 
     // Jika user mengakses halaman yang dilindungi tanpa login, redirect ke login
     if (!session && isProtectedRoute) {
-      console.log('Middleware redirecting to login - no session found for protected route')
 
       // Encode URL tujuan asli untuk diteruskan ke halaman login
       const encodedUrl = encodeURIComponent(req.nextUrl.pathname + req.nextUrl.search);
@@ -54,7 +49,6 @@ export default async function middleware(req: NextRequest) {
 
     // Jika user mengakses halaman login tapi sudah login
     if (session && req.nextUrl.pathname === '/login') {
-      console.log('Middleware redirecting from login - user already logged in')
 
       // Jika ada parameter redirectTo, gunakan itu sebagai tujuan redirect
       const redirectTo = req.nextUrl.searchParams.get('redirectTo');
@@ -69,8 +63,6 @@ export default async function middleware(req: NextRequest) {
     // Jika user mengakses halaman login tanpa parameter bypass, tambahkan parameter bypass
     // Ini untuk memastikan halaman login selalu memiliki bypass=true
     if (req.nextUrl.pathname === '/login' && !req.nextUrl.searchParams.has('bypass')) {
-      console.log('Middleware adding bypass parameter to login page')
-
       // Preserve parameter redirectTo jika ada
       const redirectTo = req.nextUrl.searchParams.get('redirectTo');
       const loginUrl = new URL('/login?bypass=true', req.url);
@@ -85,8 +77,6 @@ export default async function middleware(req: NextRequest) {
     // Jika user memiliki session dan mengakses path admin, tapi tidak ada bypass parameter,
     // redirect ke path yang sama dengan penambahan parameter bypass
     if (session && req.nextUrl.pathname.startsWith('/admin/') && !req.nextUrl.searchParams.has('bypass')) {
-      console.log('Middleware adding bypass parameter to admin route for authenticated user')
-
       // Buat URL baru dengan menambahkan parameter bypass=true
       const adminUrl = new URL(req.nextUrl.pathname, req.url)
       adminUrl.search = req.nextUrl.search

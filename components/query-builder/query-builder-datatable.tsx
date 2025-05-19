@@ -518,7 +518,6 @@ export function QueryBuilderDataTable() {
     } else {
       // Pilih semua ID karakteristik yang tersedia
       const allCharacteristicIds = availableCharacteristics.map(c => c.id);
-      console.log("Memilih semua karakteristik:", allCharacteristicIds);
       setSelectedCharacteristics(allCharacteristicIds);
     }
 
@@ -537,7 +536,6 @@ export function QueryBuilderDataTable() {
     } else {
       // Pilih semua ID judul baris yang tersedia
       const allRowTitleIds = availableRowTitles.map(r => r.id);
-      console.log("Memilih semua judul baris:", allRowTitleIds);
       setSelectedRowTitles(allRowTitleIds);
     }
 
@@ -880,7 +878,6 @@ export function QueryBuilderDataTable() {
 
   // Ubah fungsi handleReset untuk melakukan reset lebih menyeluruh
   const handleReset = () => {
-    console.log("Resetting all selections...");
 
     // Simpan dataset terlebih dahulu
     const currentDataset = selectedDataset;
@@ -901,12 +898,10 @@ export function QueryBuilderDataTable() {
     setTimeout(() => {
       // Jangan reset dataset yang dipilih
       if (currentDataset) {
-        console.log("Reloading dataset after reset:", currentDataset.id);
 
         // Ambil ulang data karakteristik dan judul baris
         try {
           if (currentTableConfigId) {
-            console.log("Using table config ID:", currentTableConfigId);
             // Jika ada konfigurasi tabel, gunakan API
             fetch(`/api/table-configs/${currentTableConfigId}`)
               .then(response => {
@@ -917,7 +912,6 @@ export function QueryBuilderDataTable() {
               })
               .then(tableConfig => {
                 if (tableConfig) {
-                  console.log("Re-processing data with table config:", tableConfig);
                   processDataWithTableConfig(tableConfig);
                 } else {
                   console.warn("Empty table config, falling back to legacy mode");
@@ -929,7 +923,6 @@ export function QueryBuilderDataTable() {
                 processDataWithLegacyConfig();
               });
           } else {
-            console.log("Falling back to legacy config method after reset");
             processDataWithLegacyConfig();
           }
 
@@ -965,7 +958,6 @@ export function QueryBuilderDataTable() {
 
     // Jika tidak ada pilihan yang cukup, hentikan
     if (selectedYears.length === 0 || selectedCharacteristics.length === 0 || selectedRowTitles.length === 0) {
-      console.log("Not enough selections to generate table");
         return;
       }
 
@@ -1000,7 +992,6 @@ export function QueryBuilderDataTable() {
     dataArray: any[],
     yearVariable: DatasetVariable
   ) => {
-    console.log("Generating pivot table with config:", tableConfig);
 
     // Periksa konfigurasi tabel valid
     if (!tableConfig) {
@@ -1028,7 +1019,6 @@ export function QueryBuilderDataTable() {
 
     // Filter berdasarkan turunan tahun jika dipilih
     if (yearDerivativeVariable && selectedYearDerivatives.length > 0) {
-      console.log("Filtering by year derivatives:", selectedYearDerivatives);
       filteredData = filteredData.filter((row) =>
         row &&
         row[yearDerivativeVariable.name] !== undefined &&
@@ -1089,8 +1079,6 @@ export function QueryBuilderDataTable() {
       })
       .filter(Boolean) as string[];
 
-    console.log("Selected row variable names:", selectedRowVariableNames);
-
     const rowTitlesByVariable: Record<string, RowTitleValue[]> = {};
     rowTitlesByVariable[rowVariable.name] = [];
 
@@ -1125,10 +1113,6 @@ export function QueryBuilderDataTable() {
       });
       }
     });
-
-    // Log untuk debugging
-    console.log("Selected row titles:", selectedRowTitles);
-    console.log("Row title values after filtering:", rowTitlesByVariable);
 
     // Periksa apakah ada judul baris yang ditemukan
     if (Object.keys(rowTitlesByVariable).length === 0 ||
@@ -1176,11 +1160,8 @@ export function QueryBuilderDataTable() {
       })
       .filter(Boolean) as string[];
 
-    console.log("Selected variable names:", selectedVariableNames);
-
     // Jika tidak ada variabel karakteristik yang dipilih secara eksplisit, gunakan semua variabel yang tersedia
     if (selectedVariableNames.length === 0 && characteristicVariables.length > 0) {
-      console.log("Tidak ada variabel karakteristik yang dipilih secara eksplisit, gunakan semua yang tersedia");
 
       // Periksa apakah ada id yang mungkin cocok dengan format nilai karakteristik
       const valueSelections = selectedCharacteristics.filter(id => id.includes('_value_'));
@@ -1222,7 +1203,6 @@ export function QueryBuilderDataTable() {
                                selectedCharacteristics.includes(variable.name);
 
       if (!isVariableSelected) {
-        console.log(`Skipping unselected characteristic variable: ${variable.name}`);
         return; // Skip variabel yang tidak dipilih
       }
 
@@ -1287,17 +1267,12 @@ export function QueryBuilderDataTable() {
       }
     });
 
-    // Log untuk debugging
-    console.log("Selected characteristics:", selectedCharacteristics);
-    console.log("Characteristic values after filtering:", characteristicsByVariable);
-
     // Periksa apakah ada karakteristik yang ditemukan
     if (Object.keys(characteristicsByVariable).length === 0) {
       console.warn("No characteristic values found in filtered data");
 
       // Jika tidak ada karakteristik yang ditemukan, tetapi ada variabel karakteristik, coba gunakan semua
       if (characteristicVariables.length > 0) {
-        console.log("Trying to use all available characteristic variables");
 
         characteristicVariables.forEach((variable) => {
           characteristicsByVariable[variable.name] = [];
@@ -1373,7 +1348,6 @@ export function QueryBuilderDataTable() {
         const characteristicValues = characteristicsByVariable[variableName];
 
         if (!characteristicValues || characteristicValues.length === 0) {
-            console.log(`No selected characteristic values for ${variableName} in legacy mode, skipping`);
           return; // Skip if no characteristic values
         }
 
@@ -1495,9 +1469,6 @@ export function QueryBuilderDataTable() {
 
         let cellValue = 0;
 
-        // Tambahkan log debugging
-        console.log(`Checking ${year} ${yearDerivative ? `- ${yearDerivative}` : ""} - ${characteristicName} - ${characteristicValue}: ${filteredRows.length} rows matched`);
-
         if (aggregationMethod === "count") {
           // Count rows
           cellValue = filteredRows.length;
@@ -1596,7 +1567,6 @@ export function QueryBuilderDataTable() {
 
   // Fungsi untuk menghasilkan data pivot tabel dengan cara lama (backward compatibility)
   const generatePivotTableLegacy = (dataArray: any[], yearVariable: DatasetVariable) => {
-    console.log("Generating pivot table with legacy mode");
 
     // Temukan variabel turunan tahun
     const yearDerivativeVariable = selectedDataset?.variables.find(
@@ -1618,7 +1588,6 @@ export function QueryBuilderDataTable() {
 
     // Filter berdasarkan turunan tahun jika dipilih
     if (yearDerivativeVariable && selectedYearDerivatives.length > 0) {
-      console.log("Legacy mode: Filtering by year derivatives:", selectedYearDerivatives);
       filteredData = filteredData.filter((row) =>
         row &&
         row[yearDerivativeVariable.name] !== undefined &&
@@ -1689,10 +1658,6 @@ export function QueryBuilderDataTable() {
       }
     });
 
-    // Log untuk debugging
-    console.log("Selected row titles (legacy):", selectedRowTitles);
-    console.log("Row title values after filtering (legacy):", rowTitlesByVariable);
-
     // Jika tidak ada judul baris yang ditemukan, coba gunakan semua yang tersedia
     if (Object.keys(rowTitlesByVariable).length === 0) {
       console.warn("No row titles selected in legacy mode, trying to use all available row titles");
@@ -1704,7 +1669,6 @@ export function QueryBuilderDataTable() {
         const rowValues = availableRowTitles.filter(r => r.variableName === primaryRowVariable);
         if (rowValues.length > 0) {
           rowTitlesByVariable[primaryRowVariable] = rowValues;
-          console.log("Using all values for first row variable:", primaryRowVariable);
         }
       }
 
@@ -1739,8 +1703,6 @@ export function QueryBuilderDataTable() {
 
     // Jika tidak ada variabel karakteristik yang dipilih secara eksplisit, gunakan semua variabel yang tersedia
     if (selectedVariableNames.length === 0 && availableCharacteristics.length > 0) {
-      console.log("Legacy mode: Tidak ada variabel karakteristik yang dipilih secara eksplisit, gunakan semua yang tersedia");
-
       // Ambil semua nama variabel karakteristik yang unik
       const allCharVariables = [...new Set(availableCharacteristics.map(c => c.variableName))];
       allCharVariables.forEach(varName => {
@@ -1800,7 +1762,6 @@ export function QueryBuilderDataTable() {
           const charValues = availableCharacteristics.filter(c => c.variableName === primaryCharVariable);
           if (charValues.length > 0) {
             characteristicsByVariable[primaryCharVariable] = charValues;
-            console.log("Using all values for first characteristic variable:", primaryCharVariable);
           }
         }
 
@@ -1815,10 +1776,6 @@ export function QueryBuilderDataTable() {
         }
       }
     }
-
-    // Log untuk debugging
-    console.log("Selected characteristics (legacy):", selectedCharacteristics);
-    console.log("Characteristic values after filtering (legacy):", characteristicsByVariable);
 
     // Create pivot table columns
     const pivotColumns: PivotColumn[] = [];
@@ -1843,7 +1800,6 @@ export function QueryBuilderDataTable() {
         const characteristicValues = characteristicsByVariable[variableName];
 
         if (!characteristicValues || characteristicValues.length === 0) {
-          console.log(`No selected characteristic values for ${variableName} in legacy mode, skipping`);
           return; // Skip if no characteristic values
         }
 
@@ -1962,9 +1918,6 @@ export function QueryBuilderDataTable() {
           return characteristicVal !== undefined && characteristicVal !== null &&
                  String(characteristicVal) === characteristicValue;
         });
-
-        // Tambahkan log debugging
-        console.log(`Legacy mode - Checking ${year} ${yearDerivative ? `- ${yearDerivative}` : ""} - ${characteristicName} - ${characteristicValue}: ${filteredRows.length} rows matched`);
 
         let cellValue = 0;
 
@@ -2098,7 +2051,6 @@ export function QueryBuilderDataTable() {
       try {
         // Jika ada selectedTableConfigId, ambil dari API
         if (selectedTableConfigId) {
-          console.log("Fetching table config:", selectedTableConfigId);
 
           const response = await fetch(`/api/table-configs/${selectedTableConfigId}`);
           if (!response.ok) {
@@ -2121,7 +2073,6 @@ export function QueryBuilderDataTable() {
       }
 
       // Jika tidak ada selectedTableConfigId atau terjadi error, gunakan cara lama
-      console.log("Falling back to legacy pivot table generation");
       return generatePivotTableLegacy(dataArray, yearVariable);
     };
 
@@ -2132,8 +2083,6 @@ export function QueryBuilderDataTable() {
   const handleSubmit = async () => {
     if (selectedData) {
       try {
-        console.log("Submitting selection to generate pivot table...");
-        console.log("Current selected data:", selectedData);
 
         // Validasi lagi apakah data yang dipilih valid
         if (selectedData.years.length === 0) {
@@ -2196,10 +2145,6 @@ export function QueryBuilderDataTable() {
             });
             return;
           }
-
-          // Log first few rows for debugging
-          console.log("First few rows of pivot data:", data.slice(0, 3));
-          console.log("Columns:", columns);
 
           setPivotTableData(data);
           setPivotColumns(columns);

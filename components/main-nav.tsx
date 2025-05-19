@@ -18,10 +18,6 @@ import {
 export function MainNav({ className, ...props }: React.HTMLAttributes<HTMLElement>) {
   const pathname = usePathname()
   const { user, isLoading } = useAuth()
-
-  // Log state untuk debugging
-  console.log('MainNav state:', { user: !!user, isLoading, pathname })
-
   return (
     <NavigationMenu className={cn("flex-1", className)}>
       <NavigationMenuList>

@@ -27,19 +27,6 @@ export function LoginForm() {
   const redirectAttemptRef = useRef(0)
   const mountedRef = useRef(true)
 
-  // Status debugging
-  console.log('Login page state:', {
-    user: !!user,
-    userId: user?.id?.substring(0, 5),
-    isLoading,
-    isSubmitting,
-    isRedirecting,
-    isStuck,
-    redirectAttempt: redirectAttemptRef.current,
-    bypass: searchParams.get('bypass'),
-    reset: searchParams.get('reset'),
-    redirectTo: searchParams.get('redirectTo')
-  })
 
   // Get the redirectTo parameter if it exists
   const redirectTo = searchParams.get('redirectTo')
@@ -50,7 +37,6 @@ export function LoginForm() {
   useEffect(() => {
     // Jika tidak ada parameter bypass, tambahkan
     if (!searchParams.has('bypass') && !isRedirecting && mountedRef.current) {
-      console.log('Adding bypass parameter to URL');
       window.location.replace('/login?bypass=true');
     }
   }, [searchParams, isRedirecting]);
@@ -60,7 +46,6 @@ export function LoginForm() {
     const reset = searchParams.get('reset')
 
     if (reset) {
-      console.log('Reset parameter detected, cleaning up local storage')
 
       // Hapus semua storage dan cookie untuk reset
       try {
@@ -82,7 +67,6 @@ export function LoginForm() {
     // Tambahkan timer untuk mendeteksi halaman yang stuck loading
     stuckTimerRef.current = setTimeout(() => {
       if ((isLoading || isRedirecting) && mountedRef.current) {
-        console.log('Page stuck in loading state, showing manual action buttons')
         setIsStuck(true)
       }
     }, 7000) // Jika loading lebih dari 7 detik, anggap stuck
@@ -113,7 +97,6 @@ export function LoginForm() {
     // Jika ada user langsung redirect agresif (paksa)
     if (user && user.id && !isRedirecting) {
       const destination = redirectTo ? `${redirectTo}?bypass=true` : "/admin/dashboard?bypass=true";
-      console.log('Emergency direct redirect to', destination);
 
       // Gunakan timeout kecil untuk menghindari race condition
       setTimeout(() => {
@@ -127,7 +110,6 @@ export function LoginForm() {
   // Pendekatan kedua: redirect normal jika user terdeteksi
   useEffect(() => {
     if (user && !isRedirecting && mountedRef.current) {
-      console.log('Login page: user is logged in, setting redirect state');
       setIsRedirecting(true);
       redirectAttemptRef.current += 1;
 
@@ -136,7 +118,6 @@ export function LoginForm() {
         redirectTimerRef.current = setTimeout(() => {
           if (mountedRef.current) {
             const destination = redirectTo ? `${redirectTo}?bypass=true` : "/admin/dashboard?bypass=true";
-            console.log('Executing redirect to', destination);
             window.location.href = destination;
           }
         }, 100);
@@ -150,7 +131,6 @@ export function LoginForm() {
       // Jika masih dalam status redirecting setelah 3 detik, paksa redirect
       const forceRedirectTimer = setTimeout(() => {
         if (mountedRef.current) {
-          console.log('Force redirecting after timeout');
           redirectAttemptRef.current += 1;
           const destination = redirectTo ? `${redirectTo}?bypass=true` : "/admin/dashboard?bypass=true";
           window.location.replace(destination);
@@ -164,7 +144,6 @@ export function LoginForm() {
   // Jika terlalu banyak upaya redirect yang gagal, coba clear cookie
   useEffect(() => {
     if (redirectAttemptRef.current >= 3 && !isLoading) {
-      console.log('Too many redirect attempts, trying to reset state');
       // Tambahkan dummy query parameter untuk memaksa refresh halaman
       window.location.href = '/login?reset=' + Date.now();
     }
@@ -172,7 +151,6 @@ export function LoginForm() {
 
   // Fungsi untuk paksa reset session
   const handleForceReset = async () => {
-    console.log("Force resetting session state...")
 
     try {
       // Sign out dari Supabase
@@ -198,7 +176,6 @@ export function LoginForm() {
 
   // Fungsi untuk paksa ke halaman admin
   const handleForceAdmin = () => {
-    console.log("Force navigating to admin page...");
     const destination = redirectTo ? `${redirectTo}?bypass=true` : "/admin/dashboard?bypass=true";
     window.location.href = destination;
   }
@@ -258,12 +235,9 @@ export function LoginForm() {
       return
     }
 
-    console.log('Attempting login with email:', email)
-
     try {
       const { error } = await signIn(email, password)
       if (error) {
-        console.log('Login error:', error.message)
         let message = "Terjadi kesalahan saat login"
         if (error.message === "Invalid login credentials") {
           message = "Email atau password tidak valid"
@@ -272,7 +246,6 @@ export function LoginForm() {
         }
         setError(message)
       } else {
-        console.log('Login successful, setting redirect state')
         // Jika berhasil login, langsung tandai sedang melakukan redirecting
         setIsRedirecting(true)
         redirectAttemptRef.current += 1

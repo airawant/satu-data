@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic"
 function logApiOperation(stage: string, details: Record<string, any> = {}) {
   const timestamp = new Date().toISOString();
   const prefix = `[INFOGRAFIS_API:${stage}]`;
-  console.log(prefix, { timestamp, ...details });
+
 }
 
 export async function GET(request: NextRequest) {

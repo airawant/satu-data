@@ -19,7 +19,6 @@ export function AdminProtectedPage({ children, redirectPath = "/admin/dashboard"
   // Pengecekan otentikasi untuk mengarahkan pengguna yang belum login
   useEffect(() => {
     if (!isLoading && !user) {
-      console.log("Unauthorized access to admin page, redirecting to login...")
       router.push(`/login?redirectTo=${redirectPath}`)
     }
   }, [user, isLoading, router, redirectPath])

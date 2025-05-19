@@ -18,7 +18,6 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024
 function logApiOperation(stage: string, details: Record<string, any> = {}) {
   const timestamp = new Date().toISOString();
   const prefix = `[UPLOAD_API:${stage}]`;
-  console.log(prefix, { timestamp, ...details });
 }
 
 export async function POST(request: NextRequest) {

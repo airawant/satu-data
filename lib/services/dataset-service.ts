@@ -119,7 +119,6 @@ export async function createDataset(dataset: Omit<Dataset, 'id' | 'created_at' |
       throw error;
     }
 
-    console.log('Dataset berhasil dibuat dengan ID:', data?.id);
     return formatDatasetFromDb(data);
   } catch (error) {
     console.error('Error creating dataset:', error);

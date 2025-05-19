@@ -235,14 +235,6 @@ export function DatasetUploader() {
 
     try {
       if (dataset) {
-        console.log('Mencoba menyimpan dataset:', {
-          name: dataset.name,
-          description: dataset.description,
-          category: dataset.category,
-          source: dataset.source,
-          variables_length: dataset.variables?.length,
-          content_length: dataset.content?.length
-        });
 
         // Periksa apakah dataset valid sebelum menyimpan
         if (!dataset.name || !dataset.category || !dataset.source) {

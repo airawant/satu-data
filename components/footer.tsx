@@ -74,11 +74,16 @@ export default function Footer() {
 
           {/* Tautan Cepat */}
           <div>
-            <h3 className="text-lg font-semibold mb-4 border-b border-slate-700 pb-2">Link Terkait</h3>
+            <h3 className="text-lg font-semibold mb-4 border-b border-slate-700 pb-2">Tautan Terkait</h3>
             <ul className="space-y-2">
               <li>
                 <Link href="/" className="text-slate-300 hover:text-white transition">
                   Beranda
+                </Link>
+              </li>
+               <li>
+                <Link href="https://tanjungpinang.kemenag.go.id/ptsp/permohonan/baru/3b6e87bef11efb96498f" className="text-slate-300 hover:text-white transition">
+                  Permohonan Data dan Informasi Publik
                 </Link>
               </li>
               <li>

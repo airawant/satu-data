@@ -133,7 +133,6 @@ export async function createTableConfig(config: Omit<TableConfig, 'id' | 'create
       throw error;
     }
 
-    console.log('Table config created with ID:', data?.id);
     return formatTableConfigFromDb(data);
   } catch (error) {
     console.error('Error creating table config:', error);

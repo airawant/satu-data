@@ -24,7 +24,6 @@ export default function DashboardPage() {
   useEffect(() => {
     // Hanya redirect jika tidak ada user dan loading auth sudah selesai
     if (!authLoading && !user) {
-      console.log("Unauthorized access to dashboard, redirecting to login...")
       router.push("/login?bypass=true&redirectTo=/admin/dashboard")
     }
   }, [user, authLoading, router])
