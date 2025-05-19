@@ -484,14 +484,382 @@ export function QueryBuilderDataTable() {
     setAvailableYearDerivatives(formattedDerivatives)
   };
 
-  // Handle year selection
+  // Modifikasi handleYearSelect untuk memfilter ulang turunan tahun, karakteristik, dan judul baris
   const handleYearSelect = (year: string) => {
+    // Simpan perubahan tahun yang dipilih
+    let newSelectedYears: string[];
+
     if (selectedYears.includes(year)) {
-      setSelectedYears(selectedYears.filter((y) => y !== year))
+      newSelectedYears = selectedYears.filter((y) => y !== year);
+      setSelectedYears(newSelectedYears);
     } else {
-      setSelectedYears([...selectedYears, year])
+      newSelectedYears = [...selectedYears, year];
+      setSelectedYears(newSelectedYears);
+    }
+
+    // Reset tabel jika sudah ditampilkan
+    if (showTable) {
+      setShowTable(false);
+      setPivotTableData([]);
+      setPivotColumns([]);
     }
   }
+
+  // Modifikasi handleYearDerivativeSelect untuk memfilter ulang karakteristik dan judul baris
+  const handleYearDerivativeSelect = (derivativeId: string) => {
+    // Simpan perubahan turunan tahun yang dipilih
+    let newSelectedYearDerivatives: string[];
+
+    if (selectedYearDerivatives.includes(derivativeId)) {
+      newSelectedYearDerivatives = selectedYearDerivatives.filter((id) => id !== derivativeId);
+      setSelectedYearDerivatives(newSelectedYearDerivatives);
+    } else {
+      newSelectedYearDerivatives = [...selectedYearDerivatives, derivativeId];
+      setSelectedYearDerivatives(newSelectedYearDerivatives);
+    }
+
+    // Reset tabel jika sudah ditampilkan
+    if (showTable) {
+      setShowTable(false);
+      setPivotTableData([]);
+      setPivotColumns([]);
+    }
+  }
+
+  // Tambahkan useEffect baru untuk memfilter nilai turunan tahun berdasarkan tahun yang dipilih
+  useEffect(() => {
+    if (!selectedDataset) return;
+
+    // Normalize dataset - handle both 'data' (old) and 'content' (new) property names
+    const dataArray = selectedDataset.content || (selectedDataset as any).data || [];
+
+    // Temukan variabel tahun dan turunan tahun
+    const yearVariable = selectedDataset.variables.find((v) => v.name.toLowerCase() === "tahun");
+    const yearDerivativeVariable = selectedDataset.variables.find(
+      (v) => v.name.toLowerCase().includes("triwulan") ||
+             v.name.toLowerCase().includes("semester") ||
+             v.name.toLowerCase().includes("bulan")
+    );
+
+    if (yearDerivativeVariable && yearVariable) {
+      // Filter data berdasarkan tahun yang dipilih
+      let filteredData = [...dataArray];
+
+      // Hanya filter jika ada tahun yang dipilih
+      if (selectedYears.length > 0) {
+        filteredData = filteredData.filter((row) =>
+          row &&
+          row[yearVariable.name] !== undefined &&
+          row[yearVariable.name] !== null &&
+          selectedYears.includes(String(row[yearVariable.name]))
+        );
+      }
+
+      // Dapatkan nilai turunan tahun yang unik dari data yang difilter
+      const uniqueDerivatives = new Set<string>();
+      filteredData.forEach((row) => {
+        if (row && row[yearDerivativeVariable.name] !== undefined && row[yearDerivativeVariable.name] !== null) {
+          uniqueDerivatives.add(row[yearDerivativeVariable.name].toString());
+        }
+      });
+
+      // Format untuk UI
+      const formattedDerivatives = Array.from(uniqueDerivatives).sort().map((val) => ({
+        id: val,
+        name: val
+      }));
+
+      setAvailableYearDerivatives(formattedDerivatives);
+
+      // Jika ada pilihan turunan tahun yang tidak lagi tersedia, bersihkan dari pilihan
+      if (selectedYearDerivatives.length > 0) {
+        const validDerivativeIds = formattedDerivatives.map(d => d.id);
+        const newSelectedDerivatives = selectedYearDerivatives.filter(id =>
+          validDerivativeIds.includes(id)
+        );
+
+        if (newSelectedDerivatives.length !== selectedYearDerivatives.length) {
+          setSelectedYearDerivatives(newSelectedDerivatives);
+
+          // Reset tabel jika sudah ditampilkan
+          if (showTable) {
+            setShowTable(false);
+            setPivotTableData([]);
+            setPivotColumns([]);
+          }
+        }
+      }
+    }
+  }, [selectedDataset, selectedYears]);
+
+  // Tambahkan useEffect untuk memfilter karakteristik dan judul baris berdasarkan tahun dan turunan tahun yang dipilih
+  useEffect(() => {
+    if (!selectedDataset) return;
+
+    // Hanya jalankan jika ada dataset yang dipilih dan setidaknya satu dari tahun atau turunan tahun yang dipilih
+    if (selectedYears.length === 0 && selectedYearDerivatives.length === 0) return;
+
+    // Normalize dataset
+    const dataArray = selectedDataset.content || (selectedDataset as any).data || [];
+
+    // Temukan variabel tahun dan turunan tahun
+    const yearVariable = selectedDataset.variables.find((v) => v.name.toLowerCase() === "tahun");
+    const yearDerivativeVariable = selectedDataset.variables.find(
+      (v) => v.name.toLowerCase().includes("triwulan") ||
+             v.name.toLowerCase().includes("semester") ||
+             v.name.toLowerCase().includes("bulan")
+    );
+
+    // Filter data berdasarkan tahun dan turunan tahun yang dipilih
+    let filteredData = [...dataArray];
+
+    // Filter berdasarkan tahun jika ada yang dipilih
+    if (selectedYears.length > 0 && yearVariable) {
+      filteredData = filteredData.filter((row) =>
+        row &&
+        row[yearVariable.name] !== undefined &&
+        row[yearVariable.name] !== null &&
+        selectedYears.includes(String(row[yearVariable.name]))
+      );
+    }
+
+    // Filter berdasarkan turunan tahun jika ada yang dipilih
+    if (selectedYearDerivatives.length > 0 && yearDerivativeVariable) {
+      filteredData = filteredData.filter((row) =>
+        row &&
+        row[yearDerivativeVariable.name] !== undefined &&
+        row[yearDerivativeVariable.name] !== null &&
+        selectedYearDerivatives.includes(String(row[yearDerivativeVariable.name]))
+      );
+    }
+
+    // Proses untuk mendapatkan karakteristik dan judul baris berdasarkan data yang difilter
+    if (selectedTableConfigId) {
+      // Gunakan konfigurasi tabel untuk mendapatkan karakteristik dan judul baris
+      fetch(`/api/table-configs/${selectedTableConfigId}`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Error fetching table config: ${response.statusText}`);
+          }
+          return response.json();
+        })
+        .then(tableConfig => {
+          updateFilteredCharacteristicsAndRowTitles(filteredData, tableConfig);
+        })
+        .catch(error => {
+          console.error('Error fetching table config for filtering:', error);
+          // Jika gagal mengambil konfigurasi, update dengan cara lama
+          updateFilteredCharacteristicsAndRowTitlesLegacy(filteredData);
+        });
+    } else {
+      // Jika tidak ada konfigurasi tabel, update dengan cara lama
+      updateFilteredCharacteristicsAndRowTitlesLegacy(filteredData);
+    }
+  }, [selectedDataset, selectedYears, selectedYearDerivatives, selectedTableConfigId]);
+
+  // Tambahkan fungsi helper untuk memperbarui karakteristik dan judul baris berdasarkan konfigurasi tabel
+  const updateFilteredCharacteristicsAndRowTitles = (filteredData: any[], tableConfig: any) => {
+    if (!selectedDataset) return;
+
+    // Ambil field judul baris dari konfigurasi tabel
+    const rowField = tableConfig.row_field;
+
+    // Ambil field karakteristik dari konfigurasi tabel
+    const characteristicFields = tableConfig.characteristic_fields || [];
+
+    // Proses judul baris
+    const rowVariable = selectedDataset.variables.find((v) => v.name === rowField);
+    if (rowVariable) {
+      const uniqueRowValues = new Set<string>();
+
+      filteredData.forEach((row) => {
+        if (row && row[rowVariable.name] !== undefined && row[rowVariable.name] !== null && row[rowVariable.name] !== "") {
+          uniqueRowValues.add(row[rowVariable.name].toString());
+        }
+      });
+
+      const rowValues = Array.from(uniqueRowValues).sort().map((value, index) => ({
+        id: `${rowVariable.id}_value_${index}`,
+        name: value,
+        variableId: rowVariable.id,
+        variableName: rowVariable.name
+      }));
+
+      setAvailableRowTitles(rowValues);
+
+      // Perbarui selected row titles jika nilai yang dipilih tidak lagi tersedia
+      if (selectedRowTitles.length > 0) {
+        const validRowIds = rowValues.map(r => r.id);
+        const newSelectedRowTitles = selectedRowTitles.filter(id =>
+          !id.includes('_value_') || validRowIds.includes(id)
+        );
+
+        if (newSelectedRowTitles.length !== selectedRowTitles.length) {
+          setSelectedRowTitles(newSelectedRowTitles);
+
+          // Reset tabel jika sudah ditampilkan
+          if (showTable) {
+            setShowTable(false);
+            setPivotTableData([]);
+            setPivotColumns([]);
+          }
+        }
+      }
+    }
+
+    // Proses karakteristik
+    const characteristicVariables = selectedDataset.variables.filter(
+      (v) => characteristicFields.includes(v.name)
+    );
+
+    if (characteristicVariables.length > 0) {
+      const characteristicValues: CharacteristicValue[] = [];
+
+      characteristicVariables.forEach((variable) => {
+        const uniqueValues = new Set<string>();
+
+        filteredData.forEach((row) => {
+          if (row && row[variable.name] !== undefined && row[variable.name] !== null && row[variable.name] !== "") {
+            uniqueValues.add(row[variable.name].toString());
+          }
+        });
+
+        const values = Array.from(uniqueValues).sort().map((value, index) => ({
+          id: `${variable.id}_value_${index}`,
+          name: value,
+          variableId: variable.id,
+          variableName: variable.name,
+          type: variable.type === "measure" ? "measure" : "count"
+        }));
+
+        characteristicValues.push(...values);
+      });
+
+      setAvailableCharacteristics(characteristicValues);
+
+      // Perbarui selected characteristics jika nilai yang dipilih tidak lagi tersedia
+      if (selectedCharacteristics.length > 0) {
+        const validCharIds = characteristicValues.map(c => c.id);
+        const newSelectedCharacteristics = selectedCharacteristics.filter(id =>
+          !id.includes('_value_') || validCharIds.includes(id)
+        );
+
+        if (newSelectedCharacteristics.length !== selectedCharacteristics.length) {
+          setSelectedCharacteristics(newSelectedCharacteristics);
+
+          // Reset tabel jika sudah ditampilkan
+          if (showTable) {
+            setShowTable(false);
+            setPivotTableData([]);
+            setPivotColumns([]);
+          }
+        }
+      }
+    }
+  };
+
+  // Tambahkan fungsi helper untuk memperbarui karakteristik dan judul baris dengan cara lama
+  const updateFilteredCharacteristicsAndRowTitlesLegacy = (filteredData: any[]) => {
+    if (!selectedDataset) return;
+
+    // Kumpulkan nilai unik untuk setiap variabel dari data yang difilter
+    const uniqueValuesByVariable: Record<string, Set<string>> = {};
+
+    selectedDataset.variables.forEach((variable) => {
+      if (variable.selected &&
+          variable.name.toLowerCase() !== "tahun" &&
+          !variable.name.toLowerCase().includes("triwulan") &&
+          !variable.name.toLowerCase().includes("semester") &&
+          !variable.name.toLowerCase().includes("bulan")) {
+
+        uniqueValuesByVariable[variable.name] = new Set<string>();
+
+        filteredData.forEach((row) => {
+          if (row && row[variable.name] !== undefined && row[variable.name] !== null && row[variable.name] !== "") {
+            uniqueValuesByVariable[variable.name].add(row[variable.name].toString());
+          }
+        });
+      }
+    });
+
+    // Perbarui karakteristik
+    const characteristicValues: CharacteristicValue[] = [];
+
+    selectedDataset.variables.forEach((variable) => {
+      if (uniqueValuesByVariable[variable.name]) {
+        const values = Array.from(uniqueValuesByVariable[variable.name]).sort();
+
+        values.forEach((value, index) => {
+          characteristicValues.push({
+            id: `${variable.id}_value_${index}`,
+            name: value,
+            variableId: variable.id,
+            variableName: variable.name,
+            type: variable.type === "measure" ? "measure" : "count"
+          });
+        });
+      }
+    });
+
+    setAvailableCharacteristics(characteristicValues);
+
+    // Perbarui judul baris
+    const rowTitleValues: RowTitleValue[] = [];
+
+    selectedDataset.variables.forEach((variable) => {
+      if (uniqueValuesByVariable[variable.name]) {
+        const values = Array.from(uniqueValuesByVariable[variable.name]).sort();
+
+        values.forEach((value, index) => {
+          rowTitleValues.push({
+            id: `${variable.id}_value_${index}`,
+            name: value,
+            variableId: variable.id,
+            variableName: variable.name
+          });
+        });
+      }
+    });
+
+    setAvailableRowTitles(rowTitleValues);
+
+    // Perbarui selected values yang tidak lagi tersedia
+    if (selectedCharacteristics.length > 0) {
+      const validCharIds = characteristicValues.map(c => c.id);
+      const newSelectedCharacteristics = selectedCharacteristics.filter(id =>
+        !id.includes('_value_') || validCharIds.includes(id)
+      );
+
+      if (newSelectedCharacteristics.length !== selectedCharacteristics.length) {
+        setSelectedCharacteristics(newSelectedCharacteristics);
+
+        // Reset tabel jika sudah ditampilkan
+        if (showTable) {
+          setShowTable(false);
+          setPivotTableData([]);
+          setPivotColumns([]);
+        }
+      }
+    }
+
+    if (selectedRowTitles.length > 0) {
+      const validRowIds = rowTitleValues.map(r => r.id);
+      const newSelectedRowTitles = selectedRowTitles.filter(id =>
+        !id.includes('_value_') || validRowIds.includes(id)
+      );
+
+      if (newSelectedRowTitles.length !== selectedRowTitles.length) {
+        setSelectedRowTitles(newSelectedRowTitles);
+
+        // Reset tabel jika sudah ditampilkan
+        if (showTable) {
+          setShowTable(false);
+          setPivotTableData([]);
+          setPivotColumns([]);
+        }
+      }
+    }
+  };
 
   // Handle select all years
   const handleSelectAllYears = () => {
@@ -544,15 +912,6 @@ export function QueryBuilderDataTable() {
       setShowTable(false);
       setPivotTableData([]);
       setPivotColumns([]);
-    }
-  }
-
-  // Handle year derivative selection
-  const handleYearDerivativeSelect = (derivativeId: string) => {
-    if (selectedYearDerivatives.includes(derivativeId)) {
-      setSelectedYearDerivatives(selectedYearDerivatives.filter((id) => id !== derivativeId))
-    } else {
-      setSelectedYearDerivatives([...selectedYearDerivatives, derivativeId])
     }
   }
 
