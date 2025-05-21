@@ -2851,21 +2851,21 @@ export function QueryBuilderDataTable() {
                     ) : (
                       <div className="h-full">
                         {displayedConfigurations.map((config) => (
-                          <div
-                            key={config.id}
-                            className={`p-3 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
-                              selectedConfigId === config.id ? "bg-primary/10" : ""
-                            }`}
-                            onClick={() => handleConfigSelect(config)}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="font-medium text-sm">{config.title}</div>
-                              {selectedConfigId === config.id && <Check className="h-4 w-4 text-primary" />}
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {config.description || "Tidak ada deskripsi"}
-                            </div>
+                        <div
+                          key={config.id}
+                          className={`p-3 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
+                            selectedConfigId === config.id ? "bg-primary/10" : ""
+                          }`}
+                          onClick={() => handleConfigSelect(config)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="font-medium text-sm">{config.title}</div>
+                            {selectedConfigId === config.id && <Check className="h-4 w-4 text-primary" />}
                           </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {config.description || "Tidak ada deskripsi"}
+                          </div>
+                        </div>
                         ))}
                       </div>
                     )}

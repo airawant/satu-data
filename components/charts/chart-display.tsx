@@ -33,6 +33,7 @@ type ChartDisplayProps = {
   groupName?: string
   groupValues?: string[]
   labelName?: string
+  showCumulativeData?: boolean
 }
 
 const COLORS = ["#E53E3E", "#38B2F8", "#805AD5", "#DD6B20", "#38A169", "#D69E2E", "#3182CE", "#D53F8C"]
@@ -112,17 +113,17 @@ const TotalDataInfo = ({ data, chartType, yAxisFields }: { data: any[]; chartTyp
 // Tambahkan formatter label untuk pie chart
 const getPieChartLabel = ({ name, value, percent }: { name: string; value: number; percent: number }) => {
   // Pastikan tampilan label tidak terlalu panjang
-  let displayName = name;
+  let labelName = name;
   if (name.length > 15) {
-    displayName = `${name.substring(0, 12)}...`;
+    labelName = `${name.substring(0, 12)}...`;
   }
 
   // Format label berdasarkan panjang teks
   if (percent < 0.05) {
-    return `${displayName}: ${(percent * 100).toFixed(0)}%`;
+    return `${labelName}: ${(percent * 100).toFixed(0)}%`;
   }
 
-  return `${displayName}: ${(percent * 100).toFixed(0)}% (${value.toLocaleString()})`;
+  return `${labelName}: ${(percent * 100).toFixed(0)}% (${value.toLocaleString()})`;
 };
 
 // Tambahkan fungsi helper untuk pengurutan bulan bahasa Indonesia
@@ -209,6 +210,107 @@ const sortDataWithIndonesianMonths = (data: any[], xAxisField: string): any[] =>
   return data; // Kembalikan data asli jika tidak mengandung bulan
 };
 
+// Fungsi untuk mengkonversi data menjadi kumulatif
+const convertToCumulativeData = (data: any[], xAxisField: string, yAxisFields: string[]): any[] => {
+  if (!data || !Array.isArray(data) || data.length === 0) return data;
+
+  // Buat salinan data agar tidak memodifikasi data asli
+  const cumulativeData = JSON.parse(JSON.stringify(data));
+
+  // Object untuk menyimpan nilai kumulatif untuk setiap field
+  const cumulativeValues: Record<string, number> = {};
+
+  // Inisialisasi nilai kumulatif untuk setiap field
+  yAxisFields.forEach(field => {
+    cumulativeValues[field] = 0;
+  });
+
+  // Hitung nilai kumulatif untuk setiap baris data
+  cumulativeData.forEach((item: any) => {
+    yAxisFields.forEach(field => {
+      // Nilai saat ini
+      const currentValue = Number(item[field] || 0);
+
+      // Tambahkan ke nilai kumulatif
+      cumulativeValues[field] += currentValue;
+
+      // Update nilai item dengan nilai kumulatif
+      item[field] = cumulativeValues[field];
+    });
+  });
+
+  return cumulativeData;
+};
+
+// Fungsi untuk mengkonversi data dengan pengelompokan menjadi kumulatif
+const convertGroupedDataToCumulative = (
+  data: any[],
+  xAxisField: string,
+  yAxisFields: string[],
+  groupName?: string,
+  groupValues?: string[]
+): any[] => {
+  if (!data || !Array.isArray(data) || data.length === 0 || !groupName || !groupValues || groupValues.length === 0) {
+    return convertToCumulativeData(data, xAxisField, yAxisFields);
+  }
+
+  // Buat salinan data yang dalam agar tidak memodifikasi data asli
+  const cumulativeData = JSON.parse(JSON.stringify(data));
+
+  // Identifikasi kolom yang berisi nilai grup
+  const groupFields: Record<string, string[]> = {};
+
+  // Untuk setiap nilai grup, cari kolom yang berkaitan
+  groupValues.forEach(groupVal => {
+    // Cari field yang sesuai dengan nilai grup ini
+    const matchingFields = yAxisFields.filter(field => {
+      if (field.includes('_')) {
+        const parts = field.split('_');
+        return parts[parts.length - 1] === groupVal;
+      }
+      return false;
+    });
+
+    groupFields[groupVal] = matchingFields;
+  });
+
+  // Object untuk menyimpan nilai kumulatif untuk setiap field per grup
+  const cumulativeValuesByGroup: Record<string, Record<string, number>> = {};
+
+  // Inisialisasi nilai kumulatif untuk setiap grup
+  groupValues.forEach(groupVal => {
+    cumulativeValuesByGroup[groupVal] = {};
+
+    // Inisialisasi nilai kumulatif untuk setiap field dalam grup
+    if (groupFields[groupVal]) {
+      groupFields[groupVal].forEach(field => {
+        cumulativeValuesByGroup[groupVal][field] = 0;
+      });
+    }
+  });
+
+  // Hitung nilai kumulatif untuk setiap baris data per grup
+  cumulativeData.forEach((item: any) => {
+    // Untuk setiap grup, perbarui nilai kumulatif
+    groupValues.forEach(groupVal => {
+      if (groupFields[groupVal]) {
+        groupFields[groupVal].forEach(field => {
+          // Nilai saat ini
+          const currentValue = Number(item[field] || 0);
+
+          // Tambahkan ke nilai kumulatif
+          cumulativeValuesByGroup[groupVal][field] += currentValue;
+
+          // Update nilai item dengan nilai kumulatif
+          item[field] = cumulativeValuesByGroup[groupVal][field];
+        });
+      }
+    });
+  });
+
+  return cumulativeData;
+};
+
 export function ChartDisplay({
   data,
   chartType,
@@ -218,7 +320,8 @@ export function ChartDisplay({
   yAxisLabel,
   groupName,
   groupValues,
-  labelName
+  labelName,
+  showCumulativeData = false
 }: ChartDisplayProps) {
   const [isVisible, setIsVisible] = useState(false)
   const [hasError, setHasError] = useState(false)
@@ -232,7 +335,7 @@ export function ChartDisplay({
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [data, chartType, xAxisField, yAxisFields])
+  }, [data, chartType, xAxisField, yAxisFields, showCumulativeData])
 
   // Log untuk debugging
   useEffect(() => {
@@ -240,7 +343,10 @@ export function ChartDisplay({
       console.log(`Menampilkan grafik dengan pengelompokan berdasarkan ${groupName}:`, groupValues);
       console.log("Field pada Y axis:", yAxisFields);
     }
-  }, [groupName, groupValues, yAxisFields]);
+    if (showCumulativeData) {
+      console.log("Menampilkan data kumulatif");
+    }
+  }, [groupName, groupValues, yAxisFields, showCumulativeData]);
 
   // Validasi data
   if (!data || !Array.isArray(data) || data.length === 0 || !yAxisFields || !yAxisFields.length) {
@@ -293,62 +399,43 @@ export function ChartDisplay({
     // Urutkan data jika mengandung bulan bahasa Indonesia
     const sortedCleanData = sortDataWithIndonesianMonths(cleanData, xAxisField);
 
+    // Konversi data menjadi kumulatif jika diaktifkan
+    const processedData = showCumulativeData
+      ? (groupName && groupValues && groupValues.length > 0)
+        ? convertGroupedDataToCumulative(sortedCleanData, xAxisField, yAxisFields, groupName, groupValues)
+        : convertToCumulativeData(sortedCleanData, xAxisField, yAxisFields)
+      : sortedCleanData;
+
     // Untuk grafik pie, kita hanya menggunakan field Y-axis pertama
-    const pieChartData = sortedCleanData
-      .filter(item => {
-        // Pastikan nama/label kategori valid
-        const name = item[xAxisField];
-        if (name === undefined || name === null || name === "" || name === "(Kosong)") {
-          return false;
-        }
-
-        // Pastikan nilai untuk kategori ini positif
-        const fieldName = yAxisFields[0] === "count" ? "count" : yAxisFields[0];
-        const value = Number(item[fieldName] || 0);
-        return value > 0;
-      })
-      .map((item) => {
-        // Pastikan nilai value adalah angka yang valid dan positif
-        const fieldName = yAxisFields[0] === "count" ? "count" : yAxisFields[0];
-        const value = Number(item[fieldName] || 0);
-
-        return {
-          name: String(item[xAxisField]),
-          value: value,
-        };
-      });
+    const pieChartData = processedData
+      .filter(item => item && item[xAxisField] && item[yAxisFields[0]])
+      .map((item) => ({
+        name: String(item[xAxisField] || "Tidak diketahui"),
+        value: Number(item[yAxisFields[0]] || 0)
+      }));
 
     // Untuk grafik scatter, kita membutuhkan minimal 2 field Y-axis
-    const scatterChartData = sortedCleanData.map((item) => ({
-      name: String(item[xAxisField] || "Tidak diketahui"),
-      x: Number(yAxisFields[0] === "count" ? (item["count"] || 0) : (item[yAxisFields[0]] || 0)),
-      y: Number(yAxisFields.length > 1 ? (yAxisFields[1] === "count" ? (item["count"] || 0) : (item[yAxisFields[1]] || 0)) : 0),
-      z: yAxisFields.length > 2 ? Number(yAxisFields[2] === "count" ? (item["count"] || 0) : (item[yAxisFields[2]] || 10)) : 10,
-    }))
+    const scatterChartData = processedData.map((item) => {
+      const result = {
+        name: String(item[xAxisField] || "Tidak diketahui"),
+        x: Number(yAxisFields[0] === "count" ? (item["count"] || 0) : (item[yAxisFields[0]] || 0)),
+        y: Number(yAxisFields.length > 1 ? (item[yAxisFields[1]] || 0) : 0),
+        z: Number(yAxisFields.length > 2 ? (item[yAxisFields[2]] || 0) : 1)
+      };
+      return result;
+    });
 
-    // Pastikan semua nilai numerik
-    const formattedData = sortedCleanData
+    // Domain for axis - use tuples instead of readonly array
+    const axisDomain: [string, string] = ['auto', 'auto'];
 
     // Fungsi untuk mendapatkan domain untuk sumbu X (penting untuk mempertahankan urutan bulan)
-    const getXAxisDomain = (): (string | number)[] => {
-      if (!formattedData || formattedData.length === 0) return [];
-
-      // Ekstrak nilai X axis
-      const xValues = formattedData.map(item => String(item[xAxisField] || ""));
-
-      // Jika mengandung bulan bahasa Indonesia, buatkan urutan domain khusus
-      if (containsIndonesianMonths(xValues)) {
-        // Filter hanya bulan yang ada dalam data
-        const monthOrder = ['januari', 'februari', 'maret', 'april', 'mei', 'juni',
-                            'juli', 'agustus', 'september', 'oktober', 'november', 'desember'];
-
-        // Ambil bulan yang ada dalam data dengan mempertahankan urutan kalender
-        return monthOrder.filter(month =>
-          xValues.some(val => val.toLowerCase() === month)
-        );
+    const getXAxisDomain = (data: any[], xAxisField: string): any => {
+      if (containsIndonesianMonths(data.map((item: any) => item[xAxisField]))) {
+        // Untuk tipe sumbu X yang berisi bulan, kita bisa meneruskan nilai undefined
+        // sehingga Recharts akan menangani domain secara otomatis
+        return undefined;
       }
-
-      return []; // Kosong berarti Recharts akan menentukan domain secara otomatis
+      return undefined; // Default domain
     };
 
     // Handler format untuk tooltip
@@ -456,28 +543,27 @@ export function ChartDisplay({
         {chartType === "bar" && (
           <div className="w-full h-full flex flex-col">
             <ResponsiveContainer width="100%" height="90%" debounce={50}>
-              <BarChart data={formattedData} margin={getMargin(chartType)}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey={xAxisField}
-                angle={-35}
-                textAnchor="end"
-                height={80}
-                label={{
-                  value: xAxisLabel,
-                  position: "insideBottom",
-                  offset: -30,
-                  style: { fontSize: 13, fontWeight: 500 }
-                }}
-                tick={{ fontSize: 11 }}
-                tickFormatter={formatXAxisTick}
-                interval={formattedData.length > 8 ? (formattedData.length > 20 ? 'preserveStartEnd' : 'equidistantPreserveStart') : 0}
-                padding={{ left: 10, right: 10 }}
-                domain={getXAxisDomain()}
-              />
+              <BarChart data={processedData} margin={getMargin(chartType)}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey={xAxisField}
+                  angle={-35}
+                  textAnchor="end"
+                  height={80}
+                  label={{
+                    value: xAxisLabel,
+                    position: "insideBottom",
+                    offset: -30,
+                    style: { fontSize: 13, fontWeight: 500 }
+                  }}
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={formatXAxisTick}
+                  interval={processedData.length > 8 ? (processedData.length > 20 ? 'preserveStartEnd' : 'equidistantPreserveStart') : 0}
+                  padding={{ left: 10, right: 10 }}
+                />
                 <YAxis
                   label={{
-                    value: yAxisLabel,
+                    value: showCumulativeData ? `${yAxisLabel} (Kumulatif)` : yAxisLabel,
                     angle: -90,
                     position: "insideLeft",
                     offset: -45,
@@ -485,7 +571,7 @@ export function ChartDisplay({
                   }}
                   width={60}
                   tickFormatter={getYAxisTickFormatter()}
-                  domain={['auto', 'auto']}
+                  domain={axisDomain}
                   padding={{ top: 10, bottom: 0 }}
                 />
                 <Tooltip content={<CustomTooltip />} />
@@ -532,16 +618,16 @@ export function ChartDisplay({
                 />
                   ))
                 )}
-            </BarChart>
-          </ResponsiveContainer>
-              <TotalDataInfo data={formattedData} chartType={chartType} yAxisFields={yAxisFields} />
+              </BarChart>
+            </ResponsiveContainer>
+              <TotalDataInfo data={processedData} chartType={chartType} yAxisFields={yAxisFields} />
             </div>
         )}
 
         {chartType === "horizontal-bar" && (
           <div className="w-full h-full flex flex-col">
             <ResponsiveContainer width="100%" height="90%" debounce={50}>
-              <BarChart layout="vertical" data={formattedData} margin={getMargin(chartType)}>
+              <BarChart layout="vertical" data={processedData} margin={getMargin(chartType)}>
               <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   type="number"
@@ -555,7 +641,7 @@ export function ChartDisplay({
                   width={120}
                   tick={{ fontSize: 12 }}
                   tickFormatter={formatXAxisTick}
-                  interval={formattedData.length > 10 ? "preserveStartEnd" : 0}
+                  interval={processedData.length > 10 ? "preserveStartEnd" : 0}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 {/* <Legend formatter={safeLegendFormatter} wrapperStyle={{ paddingTop: 10 }} /> */}
@@ -573,14 +659,14 @@ export function ChartDisplay({
               ))}
             </BarChart>
           </ResponsiveContainer>
-            <TotalDataInfo data={formattedData} chartType={chartType} yAxisFields={yAxisFields} />
+            <TotalDataInfo data={processedData} chartType={chartType} yAxisFields={yAxisFields} />
           </div>
         )}
 
         {chartType === "line" && (
           <div className="w-full h-full flex flex-col">
             <ResponsiveContainer width="100%" height="90%" debounce={50}>
-              <LineChart data={formattedData} margin={getMargin(chartType)}>
+              <LineChart data={processedData} margin={getMargin(chartType)}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey={xAxisField}
@@ -590,13 +676,18 @@ export function ChartDisplay({
                 label={{ value: xAxisLabel, position: "insideBottom", offset: -40 }}
                   tick={{ fontSize: 12 }}
                   tickFormatter={formatXAxisTick}
-                  interval={formattedData.length > 10 ? "preserveStartEnd" : 0}
+                  interval={processedData.length > 10 ? "preserveStartEnd" : 0}
                 />
                 <YAxis
-                  label={{ value: yAxisLabel, angle: -90, position: "insideLeft", offset: -40 }}
+                  label={{
+                    value: showCumulativeData ? `${yAxisLabel} (Kumulatif)` : yAxisLabel,
+                    angle: -90,
+                    position: "insideLeft",
+                    offset: -40
+                  }}
                   width={60}
                   tickFormatter={getYAxisTickFormatter()}
-                  domain={['auto', 'auto']}
+                  domain={axisDomain}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend formatter={safeLegendFormatter} wrapperStyle={{ paddingTop: 10 }} />
@@ -694,7 +785,7 @@ export function ChartDisplay({
                 )}
             </LineChart>
           </ResponsiveContainer>
-            <TotalDataInfo data={formattedData} chartType={chartType} yAxisFields={yAxisFields} />
+            <TotalDataInfo data={processedData} chartType={chartType} yAxisFields={yAxisFields} />
           </div>
         )}
 
@@ -750,7 +841,7 @@ export function ChartDisplay({
         {chartType === "stacked-bar" && (
           <div className="w-full h-full flex flex-col">
             <ResponsiveContainer width="100%" height="90%" debounce={50}>
-              <BarChart data={formattedData} margin={getMargin(chartType)}>
+              <BarChart data={processedData} margin={getMargin(chartType)}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey={xAxisField}
@@ -760,13 +851,18 @@ export function ChartDisplay({
                 label={{ value: xAxisLabel, position: "insideBottom", offset: -40 }}
                   tick={{ fontSize: 12 }}
                   tickFormatter={formatXAxisTick}
-                  interval={formattedData.length > 10 ? "preserveStartEnd" : 0}
+                  interval={processedData.length > 10 ? "preserveStartEnd" : 0}
                 />
                 <YAxis
-                  label={{ value: yAxisLabel, angle: -90, position: "insideLeft", offset: -40 }}
+                  label={{
+                    value: showCumulativeData ? `${yAxisLabel} (Kumulatif)` : yAxisLabel,
+                    angle: -90,
+                    position: "insideLeft",
+                    offset: -40
+                  }}
                   width={60}
                   tickFormatter={getYAxisTickFormatter()}
-                  domain={['auto', 'auto']}
+                  domain={axisDomain}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend formatter={safeLegendFormatter} wrapperStyle={{ paddingTop: 10 }} />
@@ -814,14 +910,14 @@ export function ChartDisplay({
                 )}
             </BarChart>
           </ResponsiveContainer>
-            <TotalDataInfo data={formattedData} chartType={chartType} yAxisFields={yAxisFields} />
+            <TotalDataInfo data={processedData} chartType={chartType} yAxisFields={yAxisFields} />
           </div>
         )}
 
         {chartType === "area" && (
           <div className="w-full h-full flex flex-col">
             <ResponsiveContainer width="100%" height="90%" debounce={50}>
-              <AreaChart data={formattedData} margin={getMargin(chartType)}>
+              <AreaChart data={processedData} margin={getMargin(chartType)}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey={xAxisField}
@@ -831,13 +927,18 @@ export function ChartDisplay({
                 label={{ value: xAxisLabel, position: "insideBottom", offset: -40 }}
                   tick={{ fontSize: 12 }}
                   tickFormatter={formatXAxisTick}
-                  interval={formattedData.length > 10 ? "preserveStartEnd" : 0}
+                  interval={processedData.length > 10 ? "preserveStartEnd" : 0}
                 />
                 <YAxis
-                  label={{ value: yAxisLabel, angle: -90, position: "insideLeft", offset: -40 }}
+                  label={{
+                    value: showCumulativeData ? `${yAxisLabel} (Kumulatif)` : yAxisLabel,
+                    angle: -90,
+                    position: "insideLeft",
+                    offset: -40
+                  }}
                   width={60}
                   tickFormatter={getYAxisTickFormatter()}
-                  domain={['auto', 'auto']}
+                  domain={axisDomain}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend formatter={safeLegendFormatter} wrapperStyle={{ paddingTop: 10 }} />
@@ -891,7 +992,7 @@ export function ChartDisplay({
                 )}
             </AreaChart>
           </ResponsiveContainer>
-            <TotalDataInfo data={formattedData} chartType={chartType} yAxisFields={yAxisFields} />
+            <TotalDataInfo data={processedData} chartType={chartType} yAxisFields={yAxisFields} />
           </div>
         )}
 
@@ -1008,7 +1109,7 @@ export function ChartDisplay({
         {chartType === "grouped-bar" && (
           <div className="w-full h-full flex flex-col">
             <ResponsiveContainer width="100%" height="90%" debounce={50}>
-              <BarChart data={formattedData} margin={getMargin(chartType)}>
+              <BarChart data={processedData} margin={getMargin(chartType)}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey={xAxisField}
@@ -1023,7 +1124,7 @@ export function ChartDisplay({
                   }}
                   tick={{ fontSize: 11 }}
                   tickFormatter={formatXAxisTick}
-                  interval={formattedData.length > 8 ? (formattedData.length > 20 ? 'preserveStartEnd' : 'equidistantPreserveStart') : 0}
+                  interval={processedData.length > 8 ? (processedData.length > 20 ? 'preserveStartEnd' : 'equidistantPreserveStart') : 0}
                   padding={{ left: 10, right: 10 }}
                 />
                 <YAxis
@@ -1102,7 +1203,7 @@ export function ChartDisplay({
                 )}
               </BarChart>
             </ResponsiveContainer>
-            <TotalDataInfo data={formattedData} chartType={chartType} yAxisFields={yAxisFields} />
+            <TotalDataInfo data={processedData} chartType={chartType} yAxisFields={yAxisFields} />
           </div>
         )}
       </div>

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { ChartDisplay } from "@/components/charts/chart-display"
+import { Switch } from "@/components/ui/switch"
 import {
   BarChart3,
   ChevronDown,
@@ -24,6 +25,7 @@ import {
   Info,
   Layers,
   ArrowRight,
+  TrendingUp,
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/components/ui/use-toast"
@@ -252,6 +254,10 @@ export function ChartBuilder() {
   const [activeTab, setActiveTab] = useState("variables")
   const [selectedChartType, setSelectedChartType] = useState<string>("")
   const [currentStep, setCurrentStep] = useState<"variables" | "chartType">("variables")
+
+  // Tambahkan state untuk opsi kumulatif
+  const [showCumulativeData, setShowCumulativeData] = useState<boolean>(false)
+  const [isCumulativeAvailable, setIsCumulativeAvailable] = useState<boolean>(false)
 
   const { toast } = useToast()
 
@@ -1122,6 +1128,44 @@ export function ChartBuilder() {
     }
   }
 
+  // Fungsi untuk mengecek apakah grafik kumulatif tersedia berdasarkan variabel yang dipilih
+  const checkCumulativeAvailability = () => {
+    // Jika tidak ada variabel X yang dipilih, grafik kumulatif tidak tersedia
+    if (!selectedXAxisVariables.length) return false;
+
+    // Cek apakah ada variabel X yang berisi 'Tahun' atau 'Bulan' dalam namanya
+    const hasTimeVariable = selectedXAxisVariables.some(varId => {
+      const variable = selectedDataset?.variables.find(v => v.id === varId);
+      return variable &&
+        (variable.name.toLowerCase().includes('tahun') ||
+         variable.name.toLowerCase().includes('bulan'));
+    });
+
+    // Cek juga apakah tipe grafik mendukung tampilan kumulatif
+    const supportedChartTypes = ['bar', 'line', 'area', 'stacked-bar'];
+    const isChartTypeSupported = supportedChartTypes.includes(selectedChartType);
+
+    return hasTimeVariable && isChartTypeSupported;
+  };
+
+  // Toggle untuk mengaktifkan data kumulatif
+  const handleToggleCumulative = () => {
+    setShowCumulativeData(prev => !prev);
+  };
+
+  // Effect untuk memeriksa ketersediaan opsi kumulatif setiap kali variabel atau jenis grafik berubah
+  useEffect(() => {
+    if (showChart) {
+      const isCumulativeSupported = checkCumulativeAvailability();
+      setIsCumulativeAvailable(isCumulativeSupported);
+
+      // Jika kumulatif tidak tersedia lagi, matikan opsi kumulatif
+      if (!isCumulativeSupported && showCumulativeData) {
+        setShowCumulativeData(false);
+      }
+    }
+  }, [selectedXAxisVariables, selectedChartType, showChart]);
+
   // Handle generate chart
   const handleGenerateChart = () => {
     try {
@@ -1153,7 +1197,7 @@ export function ChartBuilder() {
       }
 
       // Generate chart data
-      const data = generateChartData();
+      const data = generateChartData()
 
       // Validasi khusus untuk grafik lingkaran
       if (selectedChartType === "pie") {
@@ -1590,6 +1634,31 @@ export function ChartBuilder() {
                               </p>
                             )}
                           </div>
+
+                          {/* Add the cumulative option before/near chart generation button */}
+                          {currentStep === "chartType" && isCumulativeAvailable && (
+                            <div className="mt-4 mb-2">
+                              <div className="flex items-center space-x-2">
+                                <Switch
+                                  id="cumulative-data"
+                                  checked={showCumulativeData}
+                                  onCheckedChange={handleToggleCumulative}
+                                />
+                                <div>
+                                  <Label
+                                    htmlFor="cumulative-data"
+                                    className="text-sm font-medium cursor-pointer flex items-center"
+                                  >
+                                    <TrendingUp className="h-4 w-4 mr-1" />
+                                    Tampilkan Data Kumulatif
+                                  </Label>
+                                  <p className="text-xs text-muted-foreground">
+                                    Menampilkan nilai yang terakumulasi dari waktu ke waktu
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </>
                       )}
 
@@ -1694,216 +1763,74 @@ export function ChartBuilder() {
                 </div>
 
                 {showChart && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="border-green-500 text-green-500 hover:bg-green-50">
-                        Unduh
-                        <ChevronDown className="ml-1 h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleDownload("excel")}>
-                        <FileSpreadsheet className="mr-2 h-4 w-4" />
-                        <span>Excel (CSV)</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDownload("pdf")}>
-                        <FileText className="mr-2 h-4 w-4" />
-                        <span>PDF</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDownload("image")}>
-                        <ImageIcon className="mr-2 h-4 w-4" />
-                        <span>Gambar (PNG)</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </CardHeader>
-              <CardContent className="p-6">
-                {showChart ? (
-                  <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList className="mb-4">
-                      <TabsTrigger value="chart">Grafik</TabsTrigger>
-                      <TabsTrigger value="data">Data</TabsTrigger>
-                      <TabsTrigger value="variables">Variabel</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="chart">
-                      <ChartDisplay
-                        data={chartData.data}
-                        chartType={selectedChartType}
-                        xAxisField={chartData.xAxisName}
-                        yAxisFields={chartData.yAxisNames}
-                        xAxisLabel={chartData.xAxisName}
-                        yAxisLabel="Nilai"
-                        groupName={chartData.groupName}
-                        groupValues={chartData.groupValues}
-                      />
-                    </TabsContent>
-
-                    <TabsContent value="data">
-                      <div className="border rounded-md overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                {selectedXAxisVariables.length > 1
-                                  ? "Kombinasi Dimensi"
-                                  : getVariableName(selectedXAxisVariables[0])}
-                              </th>
-                              {chartData.yAxisNames.map((name: string) => (
-                                <th
-                                  key={name}
-                                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
-                                  {name === "count"
-                                    ? "Jumlah Data"
-                                    : name.includes("_")
-                                      ? `${name.split("_")[0] === "count" ? "Jumlah Data" : name.split("_")[0]} (${name.split("_")[1]})`
-                                      : name}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {chartData.data.map((row: any, index: number) => (
-                              <tr key={index}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                  {row[chartData.xAxisName]}
-                                </td>
-                                {chartData.yAxisNames.map((name: string) => (
-                                  <td key={name} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {row[name]?.toLocaleString() || 0}
-                                  </td>
-                                ))}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                  <div className="flex items-center gap-2">
+                    {isCumulativeAvailable && (
+                      <div className="flex items-center space-x-2 mr-4">
+                        <Switch
+                          id="chart-cumulative-data"
+                          checked={showCumulativeData}
+                          onCheckedChange={handleToggleCumulative}
+                        />
+                        <Label
+                          htmlFor="chart-cumulative-data"
+                          className="text-sm cursor-pointer"
+                        >
+                          Kumulatif
+                        </Label>
                       </div>
-                    </TabsContent>
+                    )}
 
-                    <TabsContent value="variables">
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-sm font-medium mb-2">Variabel Sumbu X</h3>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {selectedXAxisVariables.map((id) => {
-                              const variable = dimensions.find((d) => d.id === id)
-                              if (!variable) return null
-                              return (
-                                <div key={id} className="border rounded-md p-3">
-                                  <div className="flex items-center justify-between">
-                                    <p className="font-medium">{variable.name}</p>
-                                    <Badge variant="outline">Dimensi</Badge>
-                                  </div>
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    Tipe Data:{" "}
-                                    {variable.dataType === "string"
-                                      ? "Teks"
-                                      : variable.dataType === "number"
-                                        ? "Angka"
-                                        : "Tanggal"}
-                                  </p>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium mb-2">Variabel Sumbu Y</h3>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {selectedYAxisVariables.length > 0 ? (
-                              selectedYAxisVariables.map((id) => {
-                                const variable = measures.find((m) => m.id === id)
-                                if (!variable) return null
-                                return (
-                                  <div key={id} className="border rounded-md p-3">
-                                    <div className="flex items-center justify-between">
-                                      <p className="font-medium">{variable.name}</p>
-                                      <Badge variant="outline">Ukuran</Badge>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      Tipe Data:{" "}
-                                      {variable.dataType === "string"
-                                        ? "Teks"
-                                        : variable.dataType === "number"
-                                          ? "Angka"
-                                          : "Tanggal"}
-                                    </p>
-                                  </div>
-                                )
-                              })
-                            ) : (
-                              <div className="border rounded-md p-3">
-                                <div className="flex items-center justify-between">
-                                  <p className="font-medium">Jumlah Data (Count)</p>
-                                  <Badge variant="outline">Ukuran</Badge>
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1">Tipe Data: Angka</p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Menghitung jumlah data untuk setiap kategori pada sumbu X
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {selectedGroupVariable && (
-                          <div>
-                            <h3 className="text-sm font-medium mb-2">Variabel Grup / Warna</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="border rounded-md p-3">
-                                <div className="flex items-center justify-between">
-                                  <p className="font-medium">{getVariableName(selectedGroupVariable)}</p>
-                                  <Badge variant="outline">Dimensi</Badge>
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Digunakan untuk pengelompokan dan pewarnaan dalam grafik
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {selectedLabelVariable && (
-                          <div>
-                            <h3 className="text-sm font-medium mb-2">Label di Atas Batang</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="border rounded-md p-3">
-                                <div className="flex items-center justify-between">
-                                  <p className="font-medium">{getVariableName(selectedLabelVariable)}</p>
-                                  <Badge variant="outline">Ukuran</Badge>
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Digunakan untuk menampilkan nilai di atas batang
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </TabsContent>
-                  </Tabs>
-                ) : (
-                  <div className="h-[500px] flex items-center justify-center">
-                    <div className="text-center">
-                      <BarChart3 className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
-                      <h3 className="text-lg font-medium mb-2">Tidak Ada Grafik untuk Ditampilkan</h3>
-                      <p className="text-muted-foreground max-w-md">
-                        Pilih dataset, variabel sumbu X dan Y, lalu pilih jenis grafik dari panel samping untuk membuat
-                        visualisasi.
-                      </p>
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="border-green-500 text-green-500 hover:bg-green-50">
+                          Unduh
+                          <ChevronDown className="ml-1 h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleDownload("excel")}>
+                          <FileSpreadsheet className="mr-2 h-4 w-4" />
+                          <span>Excel (CSV)</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDownload("pdf")}>
+                          <FileText className="mr-2 h-4 w-4" />
+                          <span>PDF</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDownload("image")}>
+                          <ImageIcon className="mr-2 h-4 w-4" />
+                          <span>Gambar (PNG)</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 )}
-
-                {showChart && selectedDataset && (
-                  <div className="text-sm text-muted-foreground mt-4">
-                    <p>
-                      <strong>Catatan:</strong> Data berasal dari {selectedDataset.name}. Sumber:{" "}
-                      {selectedDataset.source || "Tidak diketahui"}
-                    </p>
+              </CardHeader>
+              <CardContent className="p-0 h-[600px]">
+                {showChart ? (
+                  <ChartDisplay
+                    data={chartData.data}
+                    chartType={selectedChartType}
+                    xAxisField={chartData.xAxisName}
+                    yAxisFields={chartData.yAxisNames}
+                    xAxisLabel={getVariableName(selectedXAxisVariables[0])}
+                    yAxisLabel={
+                      selectedYAxisVariables.length === 1
+                        ? getVariableName(selectedYAxisVariables[0])
+                        : "Nilai"
+                    }
+                    groupName={chartData.groupName}
+                    groupValues={chartData.groupValues}
+                    showCumulativeData={showCumulativeData}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <LineChart className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                      <h3 className="text-lg font-medium mb-1">Buat visualisasi data</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Pilih variabel dan jenis grafik untuk memvisualisasikan data
+                      </p>
+                    </div>
                   </div>
                 )}
               </CardContent>
