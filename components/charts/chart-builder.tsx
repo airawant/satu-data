@@ -153,6 +153,92 @@ const chartTypes = [
   },
 ]
 
+// Tambahkan fungsi helper untuk mengurutkan bulan dalam bahasa Indonesia
+const sortIndonesianMonths = (months: string[]): string[] => {
+  const monthOrder: Record<string, number> = {
+    'januari': 1,
+    'februari': 2,
+    'maret': 3,
+    'april': 4,
+    'mei': 5,
+    'juni': 6,
+    'juli': 7,
+    'agustus': 8,
+    'september': 9,
+    'oktober': 10,
+    'november': 11,
+    'desember': 12
+  };
+
+  return [...months].sort((a, b) => {
+    // Ubah ke lowercase untuk memastikan case-insensitive matching
+    const aLower = a.toLowerCase();
+    const bLower = b.toLowerCase();
+
+    // Cek apakah keduanya adalah nama bulan
+    const isAMonth = Object.keys(monthOrder).includes(aLower);
+    const isBMonth = Object.keys(monthOrder).includes(bLower);
+
+    if (isAMonth && isBMonth) {
+      // Jika keduanya bulan, urutkan berdasarkan urutan bulan
+      return monthOrder[aLower] - monthOrder[bLower];
+    } else if (isAMonth) {
+      // Jika hanya a yang bulan, a didahulukan
+      return -1;
+    } else if (isBMonth) {
+      // Jika hanya b yang bulan, b didahulukan
+      return 1;
+    } else {
+      // Jika keduanya bukan bulan, gunakan pengurutan alfabet biasa
+      return aLower.localeCompare(bLower);
+    }
+  });
+};
+
+// Fungsi untuk memeriksa apakah array berisi nama bulan bahasa Indonesia
+const containsIndonesianMonths = (items: string[]): boolean => {
+  const indonesianMonths = ['januari', 'februari', 'maret', 'april', 'mei', 'juni',
+                           'juli', 'agustus', 'september', 'oktober', 'november', 'desember'];
+
+  // Periksa apakah ada item yang sesuai dengan bulan (case insensitive)
+  return items.some(item =>
+    indonesianMonths.includes(String(item).toLowerCase())
+  );
+};
+
+// Fungsi untuk mengurutkan data jika mengandung bulan bahasa Indonesia
+const sortDataWithIndonesianMonths = (data: any[], xAxisField: string): any[] => {
+  if (!data || !Array.isArray(data) || data.length === 0 || !xAxisField) return data;
+
+  // Ekstrak nilai X-axis untuk pengecekan
+  const xValues = data.map(item => String(item[xAxisField] || ""));
+
+  // Cek apakah nilai mengandung bulan bahasa Indonesia
+  if (containsIndonesianMonths(xValues)) {
+    // Buat map untuk menerjemahkan bulan ke angka untuk pengurutan
+    const monthOrder: Record<string, number> = {
+      'januari': 1, 'februari': 2, 'maret': 3, 'april': 4,
+      'mei': 5, 'juni': 6, 'juli': 7, 'agustus': 8,
+      'september': 9, 'oktober': 10, 'november': 11, 'desember': 12
+    };
+
+    return [...data].sort((a, b) => {
+      const aValue = String(a[xAxisField] || "").toLowerCase();
+      const bValue = String(b[xAxisField] || "").toLowerCase();
+
+      const isAMonth = Object.keys(monthOrder).includes(aValue);
+      const isBMonth = Object.keys(monthOrder).includes(bValue);
+
+      if (isAMonth && isBMonth) {
+        return monthOrder[aValue] - monthOrder[bValue];
+      }
+      return 0; // Jika salah satu bukan bulan, pertahankan urutan asli
+    });
+  }
+
+  return data; // Kembalikan data asli jika tidak mengandung bulan
+};
+
 export function ChartBuilder() {
   const searchParams = useSearchParams()
   const { datasets, loading } = useDatasets()
@@ -355,7 +441,7 @@ export function ChartBuilder() {
         handleGenerateChart();
       }, 100);
   }
-  };
+};
 
   // Handle proceeding to chart type selection
   const handleProceedToChartType = () => {
@@ -563,29 +649,38 @@ export function ChartBuilder() {
               });
 
               // Convert ke array
-              const result = Object.values(aggregatedByGroupData);
+              let result = Object.values(aggregatedByGroupData);
 
-              // Sort the result by X-axis values if they are dates or numbers
-              const sortedResult = [...result].sort((a, b) => {
-                const aValue = a[primaryXAxis];
-                const bValue = b[primaryXAxis];
+              // Periksa apakah nilai X mengandung bulan bahasa Indonesia
+              const xValues = result.map(item => String(item[primaryXAxis] || ""));
+              const hasIndonesianMonths = containsIndonesianMonths(xValues);
 
-                // If both values can be parsed as dates
-                if (!isNaN(Date.parse(aValue)) && !isNaN(Date.parse(bValue))) {
-                  return new Date(aValue).getTime() - new Date(bValue).getTime();
-                }
+              // Sort hasil berdasarkan bulan Indonesia atau cara default
+              if (hasIndonesianMonths) {
+                result = sortDataWithIndonesianMonths(result, primaryXAxis);
+              } else {
+                // Default sorting (tanggal/angka/string)
+                result.sort((a, b) => {
+                  const aValue = a[primaryXAxis];
+                  const bValue = b[primaryXAxis];
 
-                // If both values can be parsed as numbers
-                if (!isNaN(Number(aValue)) && !isNaN(Number(bValue))) {
-                  return Number(aValue) - Number(bValue);
-                }
+                  // If both values can be parsed as dates
+                  if (!isNaN(Date.parse(aValue)) && !isNaN(Date.parse(bValue))) {
+                    return new Date(aValue).getTime() - new Date(bValue).getTime();
+                  }
 
-                // Default to string comparison
-                return String(aValue).localeCompare(String(bValue));
-              });
+                  // If both values can be parsed as numbers
+                  if (!isNaN(Number(aValue)) && !isNaN(Number(bValue))) {
+                    return Number(aValue) - Number(bValue);
+                  }
+
+                  // Default to string comparison
+                  return String(aValue).localeCompare(String(bValue));
+                });
+              }
 
               // Batasi jumlah data untuk visualisasi yang lebih baik
-              let finalResult = sortedResult;
+              let finalResult = result;
 
               // Untuk grafik batang/garis, batasi jumlah data jika terlalu banyak
               if (finalResult.length > 30) {
@@ -600,14 +695,14 @@ export function ChartBuilder() {
                   finalResult = [...finalResult]
                     .sort((a, b) => (b[sortField] || 0) - (a[sortField] || 0))
                     .slice(0, maxItems);
-          } else {
+                } else {
                   // Untuk line/area, ambil data dengan interval yang sesuai
                   const interval = Math.ceil(finalResult.length / maxItems);
                   finalResult = finalResult.filter((_, index) => index % interval === 0);
 
                   // Pastikan data terakhir selalu dimasukkan
-                  if (finalResult.length > 0 && finalResult[finalResult.length - 1] !== sortedResult[sortedResult.length - 1]) {
-                    finalResult.push(sortedResult[sortedResult.length - 1]);
+                  if (finalResult.length > 0 && finalResult[finalResult.length - 1] !== result[result.length - 1]) {
+                    finalResult.push(result[result.length - 1]);
                   }
                 }
               }
@@ -616,7 +711,7 @@ export function ChartBuilder() {
               const generatedYAxisNames: string[] = [];
 
               if (yAxisVariables.length > 0) {
-            yAxisVariables.forEach(yVar => {
+                yAxisVariables.forEach(yVar => {
                   groupValues.forEach(gValue => {
                     generatedYAxisNames.push(`${yVar}_${gValue}`);
                   });
@@ -698,8 +793,41 @@ export function ChartBuilder() {
                 });
               });
 
-              // Sort data jika diperlukan
-              if (selectedChartType === "line" || selectedChartType === "area") {
+              // Periksa apakah nilai X mengandung bulan bahasa Indonesia
+              const xValues = aggregatedData.map(item => String(item[primaryXAxis] || ""));
+              const hasIndonesianMonths = containsIndonesianMonths(xValues);
+
+              // Sort hasil
+              if (hasIndonesianMonths) {
+                // Sort berdasarkan grup terlebih dahulu, lalu bulan
+                aggregatedData.sort((a, b) => {
+                  // Group by groupVariable first
+                  if (a[groupVariableName] !== b[groupVariableName]) {
+                    return String(a[groupVariableName]).localeCompare(String(b[groupVariableName]));
+                  }
+
+                  // Then sort by month
+                  const aValue = String(a[primaryXAxis] || "").toLowerCase();
+                  const bValue = String(b[primaryXAxis] || "").toLowerCase();
+
+                  const monthOrder: Record<string, number> = {
+                    'januari': 1, 'februari': 2, 'maret': 3, 'april': 4,
+                    'mei': 5, 'juni': 6, 'juli': 7, 'agustus': 8,
+                    'september': 9, 'oktober': 10, 'november': 11, 'desember': 12
+                  };
+
+                  const isAMonth = Object.keys(monthOrder).includes(aValue);
+                  const isBMonth = Object.keys(monthOrder).includes(bValue);
+
+                  if (isAMonth && isBMonth) {
+                    return monthOrder[aValue] - monthOrder[bValue];
+                  }
+
+                  // Default to string comparison
+                  return aValue.localeCompare(bValue);
+                });
+              } else if (selectedChartType === "line" || selectedChartType === "area") {
+                // Default sort untuk line/area chart
                 aggregatedData.sort((a, b) => {
                   // Group by groupVariable first
                   if (a[groupVariableName] !== b[groupVariableName]) {
@@ -728,10 +856,10 @@ export function ChartBuilder() {
               // Batasi jumlah data jika terlalu banyak
               let finalResult = aggregatedData;
 
-        return {
+              return {
                 data: finalResult,
-          xAxisName: primaryXAxis,
-          yAxisNames: yAxisVariables.length ? yAxisVariables : ["count"],
+                xAxisName: primaryXAxis,
+                yAxisNames: yAxisVariables.length ? yAxisVariables : ["count"],
                 groupName: groupVariableName,
                 groupValues: groupValues,
                 labelName: labelVariableName || ""
@@ -784,29 +912,38 @@ export function ChartBuilder() {
             });
 
             // Convert to array
-            const result = Object.values(aggregatedData);
+            let result = Object.values(aggregatedData);
 
-            // Sort the result by X-axis values if they are dates or numbers
-            const sortedResult = [...result].sort((a, b) => {
-              const aValue = a[primaryXAxis];
-              const bValue = b[primaryXAxis];
+            // Periksa apakah nilai X mengandung bulan bahasa Indonesia
+            const xValues = result.map(item => String(item[primaryXAxis] || ""));
+            const hasIndonesianMonths = containsIndonesianMonths(xValues);
 
-              // If both values can be parsed as dates
-              if (!isNaN(Date.parse(aValue)) && !isNaN(Date.parse(bValue))) {
-                return new Date(aValue).getTime() - new Date(bValue).getTime();
-              }
+            // Sort hasil berdasarkan bulan Indonesia atau cara default
+            if (hasIndonesianMonths) {
+              result = sortDataWithIndonesianMonths(result, primaryXAxis);
+            } else {
+              // Default sorting (tanggal/angka/string)
+              result.sort((a, b) => {
+                const aValue = a[primaryXAxis];
+                const bValue = b[primaryXAxis];
 
-              // If both values can be parsed as numbers
-              if (!isNaN(Number(aValue)) && !isNaN(Number(bValue))) {
-                return Number(aValue) - Number(bValue);
-              }
+                // If both values can be parsed as dates
+                if (!isNaN(Date.parse(aValue)) && !isNaN(Date.parse(bValue))) {
+                  return new Date(aValue).getTime() - new Date(bValue).getTime();
+                }
 
-              // Default to string comparison
-              return String(aValue).localeCompare(String(bValue));
-            });
+                // If both values can be parsed as numbers
+                if (!isNaN(Number(aValue)) && !isNaN(Number(bValue))) {
+                  return Number(aValue) - Number(bValue);
+                }
+
+                // Default to string comparison
+                return String(aValue).localeCompare(String(bValue));
+              });
+            }
 
             // Batasi jumlah data untuk visualisasi yang lebih baik
-            let finalResult = sortedResult;
+            let finalResult = result;
 
             // Untuk grafik pie, batasi jumlah data
             if (selectedChartType === "pie" && finalResult.length > 15) {
@@ -868,8 +1005,8 @@ export function ChartBuilder() {
                 finalResult = finalResult.filter((_, index) => index % interval === 0);
 
                 // Pastikan data terakhir selalu dimasukkan
-                if (finalResult.length > 0 && finalResult[finalResult.length - 1] !== sortedResult[sortedResult.length - 1]) {
-                  finalResult.push(sortedResult[sortedResult.length - 1]);
+                if (finalResult.length > 0 && finalResult[finalResult.length - 1] !== result[result.length - 1]) {
+                  finalResult.push(result[result.length - 1]);
                 }
               }
             }

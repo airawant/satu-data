@@ -125,6 +125,90 @@ const getPieChartLabel = ({ name, value, percent }: { name: string; value: numbe
   return `${displayName}: ${(percent * 100).toFixed(0)}% (${value.toLocaleString()})`;
 };
 
+// Tambahkan fungsi helper untuk pengurutan bulan bahasa Indonesia
+const sortIndonesianMonths = (months: string[]): string[] => {
+  const monthOrder: Record<string, number> = {
+    'januari': 1,
+    'februari': 2,
+    'maret': 3,
+    'april': 4,
+    'mei': 5,
+    'juni': 6,
+    'juli': 7,
+    'agustus': 8,
+    'september': 9,
+    'oktober': 10,
+    'november': 11,
+    'desember': 12
+  };
+
+  return [...months].sort((a, b) => {
+    // Ubah ke lowercase untuk memastikan case-insensitive matching
+    const aLower = a.toLowerCase();
+    const bLower = b.toLowerCase();
+
+    // Cek apakah keduanya adalah nama bulan
+    const isAMonth = Object.keys(monthOrder).includes(aLower);
+    const isBMonth = Object.keys(monthOrder).includes(bLower);
+
+    if (isAMonth && isBMonth) {
+      // Jika keduanya bulan, urutkan berdasarkan urutan bulan
+      return monthOrder[aLower] - monthOrder[bLower];
+    } else if (isAMonth) {
+      // Jika hanya a yang bulan, a didahulukan
+      return -1;
+    } else if (isBMonth) {
+      // Jika hanya b yang bulan, b didahulukan
+      return 1;
+    } else {
+      // Jika keduanya bukan bulan, gunakan pengurutan alfabet biasa
+      return aLower.localeCompare(bLower);
+    }
+  });
+};
+
+// Fungsi untuk memeriksa apakah array berisi nama bulan bahasa Indonesia
+const containsIndonesianMonths = (items: string[]): boolean => {
+  const indonesianMonths = ['januari', 'februari', 'maret', 'april', 'mei', 'juni',
+                           'juli', 'agustus', 'september', 'oktober', 'november', 'desember'];
+  return items.some(item =>
+    indonesianMonths.includes(item.toLowerCase())
+  );
+};
+
+// Fungsi untuk memastikan data diurutkan dengan benar jika mengandung bulan
+const sortDataWithIndonesianMonths = (data: any[], xAxisField: string): any[] => {
+  if (!data || !Array.isArray(data) || data.length === 0) return data;
+
+  // Ekstrak nilai X-axis untuk pengecekan
+  const xValues = data.map(item => String(item[xAxisField] || ""));
+
+  // Cek apakah nilai mengandung bulan bahasa Indonesia
+  if (containsIndonesianMonths(xValues)) {
+    // Buat map untuk menerjemahkan bulan ke angka untuk pengurutan
+    const monthOrder: Record<string, number> = {
+      'januari': 1, 'februari': 2, 'maret': 3, 'april': 4,
+      'mei': 5, 'juni': 6, 'juli': 7, 'agustus': 8,
+      'september': 9, 'oktober': 10, 'november': 11, 'desember': 12
+    };
+
+    return [...data].sort((a, b) => {
+      const aValue = String(a[xAxisField] || "").toLowerCase();
+      const bValue = String(b[xAxisField] || "").toLowerCase();
+
+      const isAMonth = Object.keys(monthOrder).includes(aValue);
+      const isBMonth = Object.keys(monthOrder).includes(bValue);
+
+      if (isAMonth && isBMonth) {
+        return monthOrder[aValue] - monthOrder[bValue];
+      }
+      return 0; // Jika salah satu bukan bulan, pertahankan urutan
+    });
+  }
+
+  return data; // Kembalikan data asli jika tidak mengandung bulan
+};
+
 export function ChartDisplay({
   data,
   chartType,
@@ -206,8 +290,11 @@ export function ChartDisplay({
       return newItem
     }).filter(item => !item.__skipRow); // Hapus item yang ditandai untuk dilewati
 
+    // Urutkan data jika mengandung bulan bahasa Indonesia
+    const sortedCleanData = sortDataWithIndonesianMonths(cleanData, xAxisField);
+
     // Untuk grafik pie, kita hanya menggunakan field Y-axis pertama
-    const pieChartData = cleanData
+    const pieChartData = sortedCleanData
       .filter(item => {
         // Pastikan nama/label kategori valid
         const name = item[xAxisField];
@@ -232,7 +319,7 @@ export function ChartDisplay({
       });
 
     // Untuk grafik scatter, kita membutuhkan minimal 2 field Y-axis
-    const scatterChartData = cleanData.map((item) => ({
+    const scatterChartData = sortedCleanData.map((item) => ({
       name: String(item[xAxisField] || "Tidak diketahui"),
       x: Number(yAxisFields[0] === "count" ? (item["count"] || 0) : (item[yAxisFields[0]] || 0)),
       y: Number(yAxisFields.length > 1 ? (yAxisFields[1] === "count" ? (item["count"] || 0) : (item[yAxisFields[1]] || 0)) : 0),
@@ -240,7 +327,29 @@ export function ChartDisplay({
     }))
 
     // Pastikan semua nilai numerik
-    const formattedData = cleanData
+    const formattedData = sortedCleanData
+
+    // Fungsi untuk mendapatkan domain untuk sumbu X (penting untuk mempertahankan urutan bulan)
+    const getXAxisDomain = (): (string | number)[] => {
+      if (!formattedData || formattedData.length === 0) return [];
+
+      // Ekstrak nilai X axis
+      const xValues = formattedData.map(item => String(item[xAxisField] || ""));
+
+      // Jika mengandung bulan bahasa Indonesia, buatkan urutan domain khusus
+      if (containsIndonesianMonths(xValues)) {
+        // Filter hanya bulan yang ada dalam data
+        const monthOrder = ['januari', 'februari', 'maret', 'april', 'mei', 'juni',
+                            'juli', 'agustus', 'september', 'oktober', 'november', 'desember'];
+
+        // Ambil bulan yang ada dalam data dengan mempertahankan urutan kalender
+        return monthOrder.filter(month =>
+          xValues.some(val => val.toLowerCase() === month)
+        );
+      }
+
+      return []; // Kosong berarti Recharts akan menentukan domain secara otomatis
+    };
 
     // Handler format untuk tooltip
     const safeFormatter = (value: any, name: string) => {
@@ -351,20 +460,21 @@ export function ChartDisplay({
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey={xAxisField}
-                  angle={-35}
+                angle={-35}
                 textAnchor="end"
                 height={80}
-                  label={{
-                    value: xAxisLabel,
-                    position: "insideBottom",
-                    offset: -30,
-                    style: { fontSize: 13, fontWeight: 500 }
-                  }}
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={formatXAxisTick}
-                  interval={formattedData.length > 8 ? (formattedData.length > 20 ? 'preserveStartEnd' : 'equidistantPreserveStart') : 0}
-                  padding={{ left: 10, right: 10 }}
-                />
+                label={{
+                  value: xAxisLabel,
+                  position: "insideBottom",
+                  offset: -30,
+                  style: { fontSize: 13, fontWeight: 500 }
+                }}
+                tick={{ fontSize: 11 }}
+                tickFormatter={formatXAxisTick}
+                interval={formattedData.length > 8 ? (formattedData.length > 20 ? 'preserveStartEnd' : 'equidistantPreserveStart') : 0}
+                padding={{ left: 10, right: 10 }}
+                domain={getXAxisDomain()}
+              />
                 <YAxis
                   label={{
                     value: yAxisLabel,

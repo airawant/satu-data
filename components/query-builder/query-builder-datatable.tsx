@@ -78,6 +78,70 @@ type PivotColumn = {
   aggregationMethod?: string
 }
 
+// Tambahkan fungsi helper untuk pengurutan bulan dalam bahasa Indonesia
+const sortIndonesianMonths = (months: string[]): string[] => {
+  const monthOrder: Record<string, number> = {
+    'januari': 1,
+    'februari': 2,
+    'maret': 3,
+    'april': 4,
+    'mei': 5,
+    'juni': 6,
+    'juli': 7,
+    'agustus': 8,
+    'september': 9,
+    'oktober': 10,
+    'november': 11,
+    'desember': 12
+  };
+
+  return [...months].sort((a, b) => {
+    // Ubah ke lowercase untuk memastikan case-insensitive matching
+    const aLower = a.toLowerCase();
+    const bLower = b.toLowerCase();
+
+    // Cek apakah keduanya adalah nama bulan
+    const isAMonth = Object.keys(monthOrder).includes(aLower);
+    const isBMonth = Object.keys(monthOrder).includes(bLower);
+
+    if (isAMonth && isBMonth) {
+      // Jika keduanya bulan, urutkan berdasarkan urutan bulan
+      return monthOrder[aLower] - monthOrder[bLower];
+    } else if (isAMonth) {
+      // Jika hanya a yang bulan, a didahulukan
+      return -1;
+    } else if (isBMonth) {
+      // Jika hanya b yang bulan, b didahulukan
+      return 1;
+    } else {
+      // Jika keduanya bukan bulan, gunakan pengurutan alfabet biasa
+      return aLower.localeCompare(bLower);
+    }
+  });
+};
+
+// Tambahkan fungsi untuk memformat turunan tahun dengan pengurutan bulan
+const formatYearDerivatives = (uniqueDerivatives: Set<string>): { id: string; name: string }[] => {
+  const derivativeArray = Array.from(uniqueDerivatives);
+
+  // Cek apakah ini adalah daftar bulan dalam bahasa Indonesia
+  const isIndonesianMonths = derivativeArray.some(val => {
+    const lowerVal = val.toLowerCase();
+    return ['januari', 'februari', 'maret', 'april', 'mei', 'juni',
+           'juli', 'agustus', 'september', 'oktober', 'november', 'desember'].includes(lowerVal);
+  });
+
+  // Terapkan pengurutan khusus jika berisi bulan dalam bahasa Indonesia
+  const sortedDerivatives = isIndonesianMonths ?
+    sortIndonesianMonths(derivativeArray) :
+    derivativeArray.sort();
+
+  return sortedDerivatives.map((val) => ({
+    id: val,
+    name: val
+  }));
+};
+
 export function QueryBuilderDataTable() {
   const searchParams = useSearchParams()
   const { datasets, loading } = useDatasets()
@@ -331,7 +395,7 @@ export function QueryBuilderDataTable() {
       setAvailableYears(Array.from(uniqueYears).sort());
     }
 
-    // Get unique values for year derivatives
+    // Get unique values for year derivatives with proper sorting for Indonesian months
     if (yearDerivativeVariable) {
       const uniqueDerivatives = new Set<string>();
       dataArray.forEach((row) => {
@@ -340,10 +404,8 @@ export function QueryBuilderDataTable() {
         }
       });
 
-      const formattedDerivatives = Array.from(uniqueDerivatives).sort().map((val) => ({
-        id: val,
-        name: val
-      }));
+      // Format untuk UI dengan pengurutan khusus untuk bulan
+      const formattedDerivatives = formatYearDerivatives(uniqueDerivatives);
 
       setAvailableYearDerivatives(formattedDerivatives);
     }
@@ -435,7 +497,18 @@ export function QueryBuilderDataTable() {
               uniqueYearDerivatives.add(row[variable.name].toString())
             }
           })
-          dimensionValues[variable.name] = Array.from(uniqueYearDerivatives).sort()
+
+          // Tentukan apakah ini adalah bulan bahasa Indonesia dan urutkan sesuai
+          const derivativeArray = Array.from(uniqueYearDerivatives);
+          const isIndonesianMonths = derivativeArray.some(val => {
+            const lowerVal = val.toLowerCase();
+            return ['januari', 'februari', 'maret', 'april', 'mei', 'juni',
+                   'juli', 'agustus', 'september', 'oktober', 'november', 'desember'].includes(lowerVal);
+          });
+
+          dimensionValues[variable.name] = isIndonesianMonths ?
+            sortIndonesianMonths(derivativeArray) :
+            derivativeArray.sort();
         } else if (variable.selected && variable.type === "measure") {
           measures.push(variable.name)
         }
@@ -472,7 +545,7 @@ export function QueryBuilderDataTable() {
     ) || [];
     setAvailableYears(validYears);
 
-    // Convert string[] to { id: string, name: string }[] for availableYearDerivatives
+    // Convert string[] to { id: string, name: string }[] for availableYearDerivatives with proper month sorting
     const derivativeFieldName = selectedDataset.variables.find((v) => v.name.toLowerCase().includes("triwulan") || v.name.toLowerCase().includes("semester") || v.name.toLowerCase().includes("bulan"))?.name || ""
 
     const derivativeValues = dimensionValues[derivativeFieldName] || [];
@@ -563,11 +636,8 @@ export function QueryBuilderDataTable() {
         }
       });
 
-      // Format untuk UI
-      const formattedDerivatives = Array.from(uniqueDerivatives).sort().map((val) => ({
-        id: val,
-        name: val
-      }));
+      // Format untuk UI dengan pengurutan khusus untuk bulan
+      const formattedDerivatives = formatYearDerivatives(uniqueDerivatives);
 
       setAvailableYearDerivatives(formattedDerivatives);
 
