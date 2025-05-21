@@ -2837,9 +2837,9 @@ export function QueryBuilderDataTable() {
                 </div>
               </div>
 
-              <Card className="h-[400px] overflow-hidden">
-                <CardContent className="p-0">
-                  <div className="h-full overflow-y-auto">
+              <Card className="h-[400px] overflow-hidden border-2 border-gray-200">
+                <CardContent className="p-0 h-full">
+                  <div className="h-full overflow-y-auto custom-scrollbar">
                     {loading ? (
                       <div className="flex items-center justify-center h-full text-center p-4">
                         <p className="text-muted-foreground">Memuat tabel...</p>
@@ -2849,27 +2849,58 @@ export function QueryBuilderDataTable() {
                         <p className="text-muted-foreground">Tidak ada tabel yang tersedia</p>
                       </div>
                     ) : (
-                      displayedConfigurations.map((config) => (
-                        <div
-                          key={config.id}
-                          className={`p-3 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
-                            selectedConfigId === config.id ? "bg-primary/10" : ""
-                          }`}
-                          onClick={() => handleConfigSelect(config)}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="font-medium text-sm">{config.title}</div>
-                            {selectedConfigId === config.id && <Check className="h-4 w-4 text-primary" />}
+                      <div className="h-full">
+                        {displayedConfigurations.map((config) => (
+                          <div
+                            key={config.id}
+                            className={`p-3 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
+                              selectedConfigId === config.id ? "bg-primary/10" : ""
+                            }`}
+                            onClick={() => handleConfigSelect(config)}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="font-medium text-sm">{config.title}</div>
+                              {selectedConfigId === config.id && <Check className="h-4 w-4 text-primary" />}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {config.description || "Tidak ada deskripsi"}
+                            </div>
                           </div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {config.description || "Tidak ada deskripsi"}
-                          </div>
-                        </div>
-                      ))
+                        ))}
+                      </div>
                     )}
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Tambahkan style untuk scrollbar yang lebih terlihat jelas */}
+              <style jsx global>{`
+                /* Style untuk scrollbar di Chrome, Edge, dan Safari */
+                .custom-scrollbar::-webkit-scrollbar {
+                  width: 10px;
+                }
+
+                .custom-scrollbar::-webkit-scrollbar-track {
+                  background: #f1f1f1;
+                  border-radius: 5px;
+                }
+
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                  background: #c1c1c1;
+                  border-radius: 5px;
+                  border: 2px solid #f1f1f1;
+                }
+
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                  background: #a1a1a1;
+                }
+
+                /* Style untuk Firefox */
+                .custom-scrollbar {
+                  scrollbar-width: thin;
+                  scrollbar-color: #c1c1c1 #f1f1f1;
+                }
+              `}</style>
             </div>
 
             <div className="w-full lg:w-96">

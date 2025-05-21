@@ -441,7 +441,7 @@ export function ChartBuilder() {
         handleGenerateChart();
       }, 100);
   }
-};
+  };
 
   // Handle proceeding to chart type selection
   const handleProceedToChartType = () => {
@@ -661,22 +661,22 @@ export function ChartBuilder() {
               } else {
                 // Default sorting (tanggal/angka/string)
                 result.sort((a, b) => {
-                  const aValue = a[primaryXAxis];
-                  const bValue = b[primaryXAxis];
+                const aValue = a[primaryXAxis];
+                const bValue = b[primaryXAxis];
 
-                  // If both values can be parsed as dates
-                  if (!isNaN(Date.parse(aValue)) && !isNaN(Date.parse(bValue))) {
-                    return new Date(aValue).getTime() - new Date(bValue).getTime();
-                  }
+                // If both values can be parsed as dates
+                if (!isNaN(Date.parse(aValue)) && !isNaN(Date.parse(bValue))) {
+                  return new Date(aValue).getTime() - new Date(bValue).getTime();
+                }
 
-                  // If both values can be parsed as numbers
-                  if (!isNaN(Number(aValue)) && !isNaN(Number(bValue))) {
-                    return Number(aValue) - Number(bValue);
-                  }
+                // If both values can be parsed as numbers
+                if (!isNaN(Number(aValue)) && !isNaN(Number(bValue))) {
+                  return Number(aValue) - Number(bValue);
+                }
 
-                  // Default to string comparison
-                  return String(aValue).localeCompare(String(bValue));
-                });
+                // Default to string comparison
+                return String(aValue).localeCompare(String(bValue));
+              });
               }
 
               // Batasi jumlah data untuk visualisasi yang lebih baik
@@ -695,7 +695,7 @@ export function ChartBuilder() {
                   finalResult = [...finalResult]
                     .sort((a, b) => (b[sortField] || 0) - (a[sortField] || 0))
                     .slice(0, maxItems);
-                } else {
+          } else {
                   // Untuk line/area, ambil data dengan interval yang sesuai
                   const interval = Math.ceil(finalResult.length / maxItems);
                   finalResult = finalResult.filter((_, index) => index % interval === 0);
@@ -711,7 +711,7 @@ export function ChartBuilder() {
               const generatedYAxisNames: string[] = [];
 
               if (yAxisVariables.length > 0) {
-                yAxisVariables.forEach(yVar => {
+            yAxisVariables.forEach(yVar => {
                   groupValues.forEach(gValue => {
                     generatedYAxisNames.push(`${yVar}_${gValue}`);
                   });
@@ -856,10 +856,10 @@ export function ChartBuilder() {
               // Batasi jumlah data jika terlalu banyak
               let finalResult = aggregatedData;
 
-              return {
+        return {
                 data: finalResult,
-                xAxisName: primaryXAxis,
-                yAxisNames: yAxisVariables.length ? yAxisVariables : ["count"],
+          xAxisName: primaryXAxis,
+          yAxisNames: yAxisVariables.length ? yAxisVariables : ["count"],
                 groupName: groupVariableName,
                 groupValues: groupValues,
                 labelName: labelVariableName || ""
@@ -924,22 +924,22 @@ export function ChartBuilder() {
             } else {
               // Default sorting (tanggal/angka/string)
               result.sort((a, b) => {
-                const aValue = a[primaryXAxis];
-                const bValue = b[primaryXAxis];
+              const aValue = a[primaryXAxis];
+              const bValue = b[primaryXAxis];
 
-                // If both values can be parsed as dates
-                if (!isNaN(Date.parse(aValue)) && !isNaN(Date.parse(bValue))) {
-                  return new Date(aValue).getTime() - new Date(bValue).getTime();
-                }
+              // If both values can be parsed as dates
+              if (!isNaN(Date.parse(aValue)) && !isNaN(Date.parse(bValue))) {
+                return new Date(aValue).getTime() - new Date(bValue).getTime();
+              }
 
-                // If both values can be parsed as numbers
-                if (!isNaN(Number(aValue)) && !isNaN(Number(bValue))) {
-                  return Number(aValue) - Number(bValue);
-                }
+              // If both values can be parsed as numbers
+              if (!isNaN(Number(aValue)) && !isNaN(Number(bValue))) {
+                return Number(aValue) - Number(bValue);
+              }
 
-                // Default to string comparison
-                return String(aValue).localeCompare(String(bValue));
-              });
+              // Default to string comparison
+              return String(aValue).localeCompare(String(bValue));
+            });
             }
 
             // Batasi jumlah data untuk visualisasi yang lebih baik
