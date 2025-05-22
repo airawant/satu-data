@@ -417,8 +417,8 @@ export function ChartDisplay({
     // Untuk grafik scatter, kita membutuhkan minimal 2 field Y-axis
     const scatterChartData = processedData.map((item) => {
       const result = {
-        name: String(item[xAxisField] || "Tidak diketahui"),
-        x: Number(yAxisFields[0] === "count" ? (item["count"] || 0) : (item[yAxisFields[0]] || 0)),
+      name: String(item[xAxisField] || "Tidak diketahui"),
+      x: Number(yAxisFields[0] === "count" ? (item["count"] || 0) : (item[yAxisFields[0]] || 0)),
         y: Number(yAxisFields.length > 1 ? (item[yAxisFields[1]] || 0) : 0),
         z: Number(yAxisFields.length > 2 ? (item[yAxisFields[2]] || 0) : 1)
       };
@@ -544,12 +544,12 @@ export function ChartDisplay({
           <div className="w-full h-full flex flex-col">
             <ResponsiveContainer width="100%" height="90%" debounce={50}>
               <BarChart data={processedData} margin={getMargin(chartType)}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey={xAxisField}
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey={xAxisField}
                   angle={-35}
-                  textAnchor="end"
-                  height={80}
+                textAnchor="end"
+                height={80}
                   label={{
                     value: xAxisLabel,
                     position: "insideBottom",
@@ -618,8 +618,8 @@ export function ChartDisplay({
                 />
                   ))
                 )}
-              </BarChart>
-            </ResponsiveContainer>
+            </BarChart>
+          </ResponsiveContainer>
               <TotalDataInfo data={processedData} chartType={chartType} yAxisFields={yAxisFields} />
             </div>
         )}

@@ -306,6 +306,27 @@ export function QueryBuilderDataTable() {
 
   // Ubah handleConfigSelect untuk menyimpan configId
   const handleConfigSelect = (config: TableConfigItem) => {
+    // Jika pengguna memilih tabel/indikator yang berbeda, reset semua pilihan
+    if (config.id !== selectedConfigId) {
+      // Reset nilai tahun, turunan tahun, karakteristik, dan judul baris
+      setSelectedYears([])
+      setSelectedYearDerivatives([])
+      setSelectedCharacteristics([])
+      setSelectedRowTitles([])
+      // Reset juga table view
+      setShowTable(false)
+      setPivotTableData([])
+      setPivotColumns([])
+      // Reset data yang dipilih
+      setSelectedData(null)
+
+      // Reset list opsi yang tersedia
+      setAvailableYears([])
+      setAvailableYearDerivatives([])
+      setAvailableCharacteristics([])
+      setAvailableRowTitles([])
+    }
+
     setSelectedConfigId(config.id)
     setSelectedDatasetId(config.datasetId)
     setSelectedTableConfigId(config.configId || "") // Tambahkan fallback ke string kosong jika configId undefined
@@ -1095,8 +1116,8 @@ export function QueryBuilderDataTable() {
       return false;
     }
 
-    // Validasi pilihan karakteristik
-    if (selectedCharacteristics.length === 0) {
+    // Validasi pilihan karakteristik - hanya jika ada karakteristik yang tersedia
+    if (availableCharacteristics.length > 0 && selectedCharacteristics.length === 0) {
       toast({
         title: "Perhatian",
         description: "Silakan pilih minimal satu Karakteristik",
@@ -1158,7 +1179,8 @@ export function QueryBuilderDataTable() {
       return false;
     }
 
-    // Periksa apakah setidaknya satu karakteristik memiliki nilai
+    // Periksa apakah setidaknya satu karakteristik memiliki nilai - hanya jika ada karakteristik yang dipilih
+    if (selectedCharacteristics.length > 0) {
     const hasCharacteristicValues = selectedCharacteristics.some(charId => {
       // Cari karakteristik berdasarkan ID
       const characteristic = availableCharacteristics.find(c => c.id === charId);
@@ -1172,6 +1194,7 @@ export function QueryBuilderDataTable() {
         variant: "destructive",
       });
       return false;
+      }
     }
 
     // Verifikasi apakah setidaknya satu judul baris memiliki nilai
@@ -1213,7 +1236,8 @@ export function QueryBuilderDataTable() {
     for (const row of filteredByYear) {
       let rowMatches = true;
 
-      // Verifikasi karakteristik
+      // Verifikasi karakteristik - hanya jika ada karakteristik yang dipilih
+      if (selectedCharacteristicNames.size > 0) {
       for (const charName of selectedCharacteristicNames) {
         // Gunakan type casting untuk mengatasi TypeScript error
         const rowObj = row as Record<string, any>;
@@ -1221,6 +1245,7 @@ export function QueryBuilderDataTable() {
             String(rowObj[charName]) === "null" || String(rowObj[charName]) === "undefined") {
           rowMatches = false;
           break;
+          }
         }
       }
 
@@ -1258,7 +1283,10 @@ export function QueryBuilderDataTable() {
   // Tambahkan efek untuk menangani ketika konfigurasi tabel berubah
   useEffect(() => {
     // Ketika pengguna memilih kembali nilai setelah reset
-    if (selectedDataset && selectedRowTitles.length > 0 && selectedCharacteristics.length > 0 && selectedYears.length > 0) {
+    if (selectedDataset &&
+        selectedRowTitles.length > 0 &&
+        (availableCharacteristics.length === 0 || selectedCharacteristics.length > 0) &&
+        selectedYears.length > 0) {
       // Clear data tabel lama
       setPivotTableData([]);
       setPivotColumns([]);
@@ -1273,7 +1301,7 @@ export function QueryBuilderDataTable() {
         rowTitles: selectedRowTitles
       });
     }
-  }, [selectedRowTitles, selectedCharacteristics, selectedYears, selectedDataset]);
+  }, [selectedRowTitles, selectedCharacteristics, selectedYears, selectedDataset, availableCharacteristics]);
 
   // Ubah cara handleAddSelection untuk validasi ulang data
   const handleAddSelection = () => {
@@ -1386,7 +1414,9 @@ export function QueryBuilderDataTable() {
     setPivotColumns([]);
 
     // Jika tidak ada pilihan yang cukup, hentikan
-    if (selectedYears.length === 0 || selectedCharacteristics.length === 0 || selectedRowTitles.length === 0) {
+    if (selectedYears.length === 0 ||
+        (availableCharacteristics.length > 0 && selectedCharacteristics.length === 0) ||
+        selectedRowTitles.length === 0) {
         return;
       }
 
@@ -1559,20 +1589,24 @@ export function QueryBuilderDataTable() {
     const characteristicFields = Array.isArray(tableConfig.characteristic_fields) ?
       tableConfig.characteristic_fields : [];
 
+    // Jika tidak ada field karakteristik, buat kolom kosong untuk karakteristik
+    // agar tabel tetap bisa ditampilkan
+    const characteristicsByVariable: Record<string, CharacteristicValue[]> = {};
+
     if (characteristicFields.length === 0) {
       console.warn("No characteristic fields found in table config");
-      toast({
-        title: "Konfigurasi Tidak Lengkap",
-        description: "Tidak ada field karakteristik yang ditemukan dalam konfigurasi tabel.",
-        variant: "destructive",
-      });
-    }
-
+      // Buat karakteristik dummy jika tidak ada karakteristik yang dikonfigurasi
+      characteristicsByVariable["_dummy_characteristic"] = [{
+        id: "_dummy_characteristic_value",
+        name: "Nilai",
+        variableId: "_dummy",
+        variableName: "_dummy_characteristic",
+        type: "count"
+      }];
+    } else {
     const characteristicVariables = selectedDataset?.variables.filter((v) =>
       characteristicFields.includes(v.name)
     ) || [];
-
-    const characteristicsByVariable: Record<string, CharacteristicValue[]> = {};
 
     // Membuat pemetaan antara ID karakteristik yang dipilih dan nilai aktualnya
     const selectedCharacteristicMap = new Map<string, boolean>();
@@ -1728,23 +1762,28 @@ export function QueryBuilderDataTable() {
 
         console.log("After fallback to all characteristics:", characteristicsByVariable);
 
-        // Jika masih kosong, tampilkan pesan error
-        if (Object.keys(characteristicsByVariable).length === 0 ||
-            Object.values(characteristicsByVariable).every(values => values.length === 0)) {
-          toast({
-            title: "Tidak Ada Data",
-            description: "Tidak ada nilai karakteristik yang cocok dengan filter yang dipilih.",
-            variant: "destructive",
-          });
-          return { data: [], columns: [] };
+          // Jika masih kosong, kembalikan error
+          if (Object.keys(characteristicsByVariable).length === 0) {
+            console.warn("No characteristics found, creating dummy characteristic");
+            // Buat karakteristik dummy jika tidak ada karakteristik yang tersedia
+            characteristicsByVariable["_dummy_characteristic"] = [{
+              id: "_dummy_characteristic_value",
+              name: "Nilai",
+              variableId: "_dummy",
+              variableName: "_dummy_characteristic",
+              type: "count"
+            }];
         }
       } else {
-        toast({
-          title: "Tidak Ada Data",
-          description: "Tidak ada nilai karakteristik yang cocok dengan filter yang dipilih.",
-          variant: "destructive",
-        });
-        return { data: [], columns: [] };
+          // Buat karakteristik dummy jika tidak ada karakteristik yang tersedia
+          characteristicsByVariable["_dummy_characteristic"] = [{
+            id: "_dummy_characteristic_value",
+            name: "Nilai",
+            variableId: "_dummy",
+            variableName: "_dummy_characteristic",
+            type: "count"
+          }];
+        }
       }
     }
 
@@ -1865,6 +1904,41 @@ export function QueryBuilderDataTable() {
         if (!year || !characteristicName || !characteristicValue) {
           console.warn("Missing column properties", column);
           dataRow[column.id] = 0;
+          return;
+        }
+
+        // Jika ini adalah karakteristik dummy, gunakan nilai default
+        if (characteristicName === "_dummy_characteristic") {
+          // Hitung jumlah baris yang cocok dengan kombinasi baris saat ini
+          // dan tahun yang dipilih
+          const matchingRows = filteredData.filter((row) => {
+            if (!row) return false; // Skip invalid rows
+
+            // Skip if row doesn't have year data
+            const yearVal = row[yearVariable.name];
+            if (yearVal === undefined || yearVal === null || String(yearVal) !== year) return false;
+
+            // Filter by year derivative if specified
+            if (yearDerivative && yearDerivativeVariable) {
+              const derivativeVal = row[yearDerivativeVariable.name];
+              if (derivativeVal === undefined || derivativeVal === null || String(derivativeVal) !== yearDerivative) return false;
+            }
+
+            // Check if row matches the current combination
+            return Object.keys(combination).every((variable) => {
+              const rowVal = row[variable];
+              return rowVal !== undefined && rowVal !== null && String(rowVal) === combination[variable];
+            });
+          });
+
+          if (aggregationMethod === "count") {
+            dataRow[column.id] = matchingRows.length;
+          } else if (aggregationMethod === "sum" || aggregationMethod === "average") {
+            // Untuk sum dan average, gunakan jumlah baris sebagai nilai
+            dataRow[column.id] = matchingRows.length;
+          }
+
+          rowTotal += dataRow[column.id];
           return;
         }
 
@@ -2320,6 +2394,41 @@ export function QueryBuilderDataTable() {
           return;
         }
 
+        // Jika ini adalah karakteristik dummy, gunakan nilai yang sesuai dengan jumlah data
+        if (characteristicName === "_dummy_characteristic") {
+          // Hitung jumlah baris yang cocok dengan kombinasi baris saat ini
+          // dan tahun yang dipilih
+          const matchingRows = filteredData.filter((row) => {
+            if (!row) return false; // Skip invalid rows
+
+            // Skip if row doesn't have year data
+            const yearVal = row[yearVariable.name];
+            if (yearVal === undefined || yearVal === null || String(yearVal) !== year) return false;
+
+            // Filter by year derivative if specified
+            if (yearDerivative && yearDerivativeVariable) {
+              const derivativeVal = row[yearDerivativeVariable.name];
+              if (derivativeVal === undefined || derivativeVal === null || String(derivativeVal) !== yearDerivative) return false;
+            }
+
+            // Check if row matches the current combination
+            return Object.keys(combination).every((variable) => {
+              const rowVal = row[variable];
+              return rowVal !== undefined && rowVal !== null && String(rowVal) === combination[variable];
+            });
+          });
+
+          if (aggregationMethod === "count") {
+            dataRow[column.id] = matchingRows.length;
+          } else if (aggregationMethod === "sum" || aggregationMethod === "average") {
+            // Untuk sum dan average, gunakan jumlah baris sebagai nilai
+            dataRow[column.id] = matchingRows.length;
+          }
+
+          rowTotal += dataRow[column.id];
+          return;
+        }
+
         // Filter data for this year, year derivative, and row combination - dengan penanganan null/undefined
         const filteredRows = filteredData.filter((row) => {
           if (!row) return false; // Skip invalid rows
@@ -2523,7 +2632,8 @@ export function QueryBuilderDataTable() {
           return;
         }
 
-        if (selectedData.characteristics.length === 0) {
+        // Validasi karakteristik hanya jika tersedia
+        if (availableCharacteristics.length > 0 && selectedData.characteristics.length === 0) {
           toast({
             title: "Perhatian",
             description: "Silakan pilih minimal satu Karakteristik",
@@ -3179,7 +3289,7 @@ export function QueryBuilderDataTable() {
               disabled={
                 !selectedDataset ||
                 selectedYears.length === 0 ||
-                selectedCharacteristics.length === 0 ||
+                (availableCharacteristics.length > 0 && selectedCharacteristics.length === 0) ||
                 selectedRowTitles.length === 0
               }
             >

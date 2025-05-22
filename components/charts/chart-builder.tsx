@@ -1780,46 +1780,46 @@ export function ChartBuilder() {
                       </div>
                     )}
 
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="border-green-500 text-green-500 hover:bg-green-50">
-                          Unduh
-                          <ChevronDown className="ml-1 h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleDownload("excel")}>
-                          <FileSpreadsheet className="mr-2 h-4 w-4" />
-                          <span>Excel (CSV)</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDownload("pdf")}>
-                          <FileText className="mr-2 h-4 w-4" />
-                          <span>PDF</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDownload("image")}>
-                          <ImageIcon className="mr-2 h-4 w-4" />
-                          <span>Gambar (PNG)</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="border-green-500 text-green-500 hover:bg-green-50">
+                        Unduh
+                        <ChevronDown className="ml-1 h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleDownload("excel")}>
+                        <FileSpreadsheet className="mr-2 h-4 w-4" />
+                        <span>Excel (CSV)</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownload("pdf")}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        <span>PDF</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownload("image")}>
+                        <ImageIcon className="mr-2 h-4 w-4" />
+                        <span>Gambar (PNG)</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   </div>
                 )}
               </CardHeader>
               <CardContent className="p-0 h-[600px]">
                 {showChart ? (
-                  <ChartDisplay
-                    data={chartData.data}
-                    chartType={selectedChartType}
-                    xAxisField={chartData.xAxisName}
-                    yAxisFields={chartData.yAxisNames}
+                      <ChartDisplay
+                        data={chartData.data}
+                        chartType={selectedChartType}
+                        xAxisField={chartData.xAxisName}
+                        yAxisFields={chartData.yAxisNames}
                     xAxisLabel={getVariableName(selectedXAxisVariables[0])}
                     yAxisLabel={
                       selectedYAxisVariables.length === 1
                         ? getVariableName(selectedYAxisVariables[0])
                         : "Nilai"
                     }
-                    groupName={chartData.groupName}
-                    groupValues={chartData.groupValues}
+                        groupName={chartData.groupName}
+                        groupValues={chartData.groupValues}
                     showCumulativeData={showCumulativeData}
                   />
                 ) : (
