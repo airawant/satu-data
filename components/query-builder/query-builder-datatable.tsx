@@ -12,6 +12,7 @@ import {
   Filter,
   SlidersHorizontal,
   Info,
+  Download,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -465,28 +466,99 @@ export function QueryBuilderDataTable() {
       // Get unique values for these characteristics
       const characteristicValues: CharacteristicValue[] = [];
 
-      characteristicVariables.forEach((variable) => {
-        const uniqueValues = new Set<string>();
-        dataArray.forEach((row) => {
-                if (row[variable.name] !== undefined && row[variable.name] !== null && row[variable.name] !== "") {
-            uniqueValues.add(row[variable.name].toString());
-                }
+      // Jika aggregation_method adalah "sum" atau "average", hanya tampilkan "Jumlah"
+      const aggregationMethod = tableConfig.aggregation_method || 'sum';
+      if (aggregationMethod === "sum" || aggregationMethod === "average") {
+        // Untuk setiap variabel karakteristik, tambahkan satu pilihan "Jumlah"
+        characteristicVariables.forEach((variable) => {
+          characteristicValues.push({
+            id: `${variable.id}_jumlah`,
+            name: "Jumlah",
+            variableId: variable.id,
+            variableName: variable.name,
+            type: "measure"
+          });
         });
+      } else {
+        // Untuk metode lain (seperti "count"), tampilkan semua nilai karakteristik
+        characteristicVariables.forEach((variable) => {
+          const uniqueValues = new Set<string>();
+          dataArray.forEach((row) => {
+            if (row[variable.name] !== undefined && row[variable.name] !== null && row[variable.name] !== "") {
+              uniqueValues.add(row[variable.name].toString());
+            }
+          });
 
-        const values = Array.from(uniqueValues).sort().map((value, index) => ({
-                  id: `${variable.id}_value_${index}`,
-                  name: value,
-                  variableId: variable.id,
-                  variableName: variable.name,
-          type: variable.type === "measure" ? "measure" : "count"
-        }));
+          const values = Array.from(uniqueValues).sort().map((value, index) => ({
+            id: `${variable.id}_value_${index}`,
+            name: value,
+            variableId: variable.id,
+            variableName: variable.name,
+            type: variable.type === "measure" ? "measure" : "count"
+          }));
 
-        characteristicValues.push(...values);
-      });
+          characteristicValues.push(...values);
+        });
+      }
 
       setAvailableCharacteristics(characteristicValues);
     }
   };
+
+  // Fungsi untuk mengunduh data tabel dalam format CSV
+  const downloadCSV = () => {
+    if (!pivotTableData || pivotTableData.length === 0 || !pivotColumns || pivotColumns.length === 0) {
+      toast({
+        title: "Tidak ada data untuk diunduh",
+        description: "Silakan pilih data dan tampilkan tabel terlebih dahulu",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      // Membuat header CSV
+      const headers = ["Row Title", ...pivotColumns.map(col => col.name)]
+      
+      // Membuat baris data
+      const rows = pivotTableData.map(row => {
+        const rowValues = [row.rowTitle]
+        pivotColumns.forEach(col => {
+          rowValues.push(row[col.id] !== undefined && row[col.id] !== null ? row[col.id] : "")
+        })
+        return rowValues
+      })
+      
+      // Menggabungkan header dan baris data
+      const csvContent = [
+        headers.join(","),
+        ...rows.map(row => row.join(","))
+      ].join("\n")
+      
+      // Membuat blob dan link untuk mengunduh
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.setAttribute("href", url)
+      link.setAttribute("download", `data-tabel-${new Date().toISOString().slice(0, 10)}.csv`)
+      link.style.visibility = "hidden"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      toast({
+        title: "Berhasil mengunduh data",
+        description: "Data tabel telah berhasil diunduh dalam format CSV",
+      })
+    } catch (error) {
+      console.error("Error downloading CSV:", error)
+      toast({
+        title: "Gagal mengunduh data",
+        description: "Terjadi kesalahan saat mengunduh data",
+        variant: "destructive",
+      })
+    }
+  }
 
   // Fungsi untuk memproses data dengan cara lama (backward compatibility)
   const processDataWithLegacyConfig = () => {
@@ -806,25 +878,41 @@ export function QueryBuilderDataTable() {
     if (characteristicVariables.length > 0) {
       const characteristicValues: CharacteristicValue[] = [];
 
-      characteristicVariables.forEach((variable) => {
-        const uniqueValues = new Set<string>();
-
-        filteredData.forEach((row) => {
-          if (row && row[variable.name] !== undefined && row[variable.name] !== null && row[variable.name] !== "") {
-            uniqueValues.add(row[variable.name].toString());
-          }
+      // Jika aggregation_method adalah "sum" atau "average", hanya tampilkan "Jumlah"
+      const aggregationMethod = tableConfig.aggregation_method || 'sum';
+      if (aggregationMethod === "sum" || aggregationMethod === "average") {
+        // Untuk setiap variabel karakteristik, tambahkan satu pilihan "Jumlah"
+        characteristicVariables.forEach((variable) => {
+          characteristicValues.push({
+            id: `${variable.id}_jumlah`,
+            name: "Jumlah",
+            variableId: variable.id,
+            variableName: variable.name,
+            type: "measure"
+          });
         });
+      } else {
+        // Untuk metode lain (seperti "count"), tampilkan semua nilai karakteristik
+        characteristicVariables.forEach((variable) => {
+          const uniqueValues = new Set<string>();
 
-        const values = Array.from(uniqueValues).sort().map((value, index) => ({
-          id: `${variable.id}_value_${index}`,
-          name: value,
-          variableId: variable.id,
-          variableName: variable.name,
-          type: variable.type === "measure" ? "measure" : "count"
-        }));
+          filteredData.forEach((row) => {
+            if (row && row[variable.name] !== undefined && row[variable.name] !== null && row[variable.name] !== "") {
+              uniqueValues.add(row[variable.name].toString());
+            }
+          });
 
-        characteristicValues.push(...values);
-      });
+          const values = Array.from(uniqueValues).sort().map((value, index) => ({
+            id: `${variable.id}_value_${index}`,
+            name: value,
+            variableId: variable.id,
+            variableName: variable.name,
+            type: variable.type === "measure" ? "measure" : "count"
+          }));
+
+          characteristicValues.push(...values);
+        });
+      }
 
       setAvailableCharacteristics(characteristicValues);
 
@@ -876,21 +964,39 @@ export function QueryBuilderDataTable() {
     // Perbarui karakteristik
     const characteristicValues: CharacteristicValue[] = [];
 
-    selectedDataset.variables.forEach((variable) => {
-      if (uniqueValuesByVariable[variable.name]) {
-        const values = Array.from(uniqueValuesByVariable[variable.name]).sort();
-
-        values.forEach((value, index) => {
+    // Jika aggregation_method adalah "sum" atau "average", hanya tampilkan "Jumlah"
+    const aggregationMethod = tableConfig.aggregation_method || 'sum';
+    if (aggregationMethod === "sum" || aggregationMethod === "average") {
+      // Untuk setiap variabel karakteristik, tambahkan satu pilihan "Jumlah"
+      selectedDataset.variables.forEach((variable) => {
+        if (uniqueValuesByVariable[variable.name]) {
           characteristicValues.push({
-            id: `${variable.id}_value_${index}`,
-            name: value,
+            id: `${variable.id}_jumlah`,
+            name: "Jumlah",
             variableId: variable.id,
             variableName: variable.name,
-            type: variable.type === "measure" ? "measure" : "count"
+            type: "measure"
           });
-        });
-      }
-    });
+        }
+      });
+    } else {
+      // Untuk metode lain, tampilkan semua nilai karakteristik
+      selectedDataset.variables.forEach((variable) => {
+        if (uniqueValuesByVariable[variable.name]) {
+          const values = Array.from(uniqueValuesByVariable[variable.name]).sort();
+
+          values.forEach((value, index) => {
+            characteristicValues.push({
+              id: `${variable.id}_value_${index}`,
+              name: value,
+              variableId: variable.id,
+              variableName: variable.name,
+              type: variable.type === "measure" ? "measure" : "count"
+            });
+          });
+        }
+      });
+    }
 
     setAvailableCharacteristics(characteristicValues);
 
@@ -1819,22 +1925,41 @@ export function QueryBuilderDataTable() {
           return; // Skip if no characteristic values
         }
 
-        characteristicValues.forEach((characteristic) => {
+        // Jika aggregation_method adalah "sum" atau "average", hanya tampilkan "Jumlah"
+        if (aggregationMethod === "sum" || aggregationMethod === "average") {
+          const columnId = derivative ?
+            `${year}_${derivative}_${variableName}_Jumlah` :
+            `${year}_${variableName}_Jumlah`;
+
+          characteristicValueColumns.push({
+            id: columnId,
+            name: "Jumlah",
+            year,
+            yearDerivative: derivative || undefined,
+            characteristicName: variableName,
+            characteristicValue: "Jumlah",
+            type: "measure",
+            aggregationMethod,
+          });
+        } else {
+          // Untuk metode lain (seperti "count"), tampilkan semua nilai karakteristik
+          characteristicValues.forEach((characteristic) => {
             const columnId = derivative ?
               `${year}_${derivative}_${variableName}_${characteristic.name}` :
               `${year}_${variableName}_${characteristic.name}`;
 
-          characteristicValueColumns.push({
+            characteristicValueColumns.push({
               id: columnId,
-            name: characteristic.name,
-            year,
+              name: characteristic.name,
+              year,
               yearDerivative: derivative || undefined,
-            characteristicName: variableName,
-            characteristicValue: characteristic.name,
-            type: characteristic.type || "count",
-            aggregationMethod,
+              characteristicName: variableName,
+              characteristicValue: characteristic.name,
+              type: characteristic.type || "count",
+              aggregationMethod,
             });
           });
+        }
         });
       });
     });
@@ -1965,9 +2090,16 @@ export function QueryBuilderDataTable() {
           }
 
           // Check if row matches the characteristic value
-          const characteristicVal = row[characteristicName];
-          return characteristicVal !== undefined && characteristicVal !== null &&
-                 String(characteristicVal) === characteristicValue;
+          // Jika aggregation_method adalah "sum" atau "average" dan characteristicValue adalah "Jumlah",
+          // maka tidak perlu filter berdasarkan nilai karakteristik
+          if ((aggregationMethod === "sum" || aggregationMethod === "average") && characteristicValue === "Jumlah") {
+            return true; // Ambil semua data untuk jumlah/rata-rata
+          } else {
+            // Untuk metode lain, filter berdasarkan nilai karakteristik
+            const characteristicVal = row[characteristicName];
+            return characteristicVal !== undefined && characteristicVal !== null &&
+                   String(characteristicVal) === characteristicValue;
+          }
         });
 
         let cellValue = 0;
@@ -2306,17 +2438,31 @@ export function QueryBuilderDataTable() {
           return; // Skip if no characteristic values
         }
 
-        characteristicValues.forEach((characteristic) => {
+        // Jika aggregation_method adalah "sum" atau "average", hanya tampilkan "Jumlah"
+        if (aggregationMethod === "sum" || aggregationMethod === "average") {
           characteristicValueColumns.push({
-            id: `${year}_${variableName}_${characteristic.name}`,
-            name: characteristic.name,
+            id: `${year}_${variableName}_Jumlah`,
+            name: "Jumlah",
             year,
             characteristicName: variableName,
-            characteristicValue: characteristic.name,
-            type: characteristic.type || "count",
+            characteristicValue: "Jumlah",
+            type: "measure",
             aggregationMethod,
           });
-        });
+        } else {
+          // Untuk metode lain (seperti "count"), tampilkan semua nilai karakteristik
+          characteristicValues.forEach((characteristic) => {
+            characteristicValueColumns.push({
+              id: `${year}_${variableName}_${characteristic.name}`,
+              name: characteristic.name,
+              year,
+              characteristicName: variableName,
+              characteristicValue: characteristic.name,
+              type: characteristic.type || "count",
+              aggregationMethod,
+            });
+          });
+        }
       });
     });
 
@@ -2452,9 +2598,16 @@ export function QueryBuilderDataTable() {
           }
 
           // Check if row matches the characteristic value
-          const characteristicVal = row[characteristicName];
-          return characteristicVal !== undefined && characteristicVal !== null &&
-                 String(characteristicVal) === characteristicValue;
+          // Jika aggregation_method adalah "sum" atau "average" dan characteristicValue adalah "Jumlah",
+          // maka tidak perlu filter berdasarkan nilai karakteristik
+          if ((aggregationMethod === "sum" || aggregationMethod === "average") && characteristicValue === "Jumlah") {
+            return true; // Ambil semua data untuk jumlah/rata-rata
+          } else {
+            // Untuk metode lain, filter berdasarkan nilai karakteristik
+            const characteristicVal = row[characteristicName];
+            return characteristicVal !== undefined && characteristicVal !== null &&
+                   String(characteristicVal) === characteristicValue;
+          }
         });
 
         let cellValue = 0;
@@ -2728,10 +2881,128 @@ export function QueryBuilderDataTable() {
   };
 
   const handleDownload = (type: string) => {
-    toast({
-      title: "Unduh Data",
-      description: `Fitur unduh ${type} belum tersedia.`,
-    })
+    if (!pivotTableData || pivotTableData.length === 0 || !pivotColumns || pivotColumns.length === 0) {
+      toast({
+        title: "Tidak ada data untuk diunduh",
+        description: "Silakan pilih data dan tampilkan tabel terlebih dahulu",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      if (type === "excel") {
+        // Membuat header CSV
+        const headers = ["Row Title", ...pivotColumns.filter(col => col.type !== "rowTitle").map(col => col.name)]
+        
+        // Membuat baris data
+        const rows = pivotTableData.map(row => {
+          const rowValues = [row.rowTitle]
+          pivotColumns.filter(col => col.type !== "rowTitle").forEach(col => {
+            rowValues.push(row[col.id] !== undefined && row[col.id] !== null ? row[col.id] : "")
+          })
+          return rowValues
+        })
+        
+        // Menggabungkan header dan baris data
+        const csvContent = [
+          headers.join(","),
+          ...rows.map(row => row.join(","))
+        ].join("\n")
+        
+        // Membuat blob dan link untuk mengunduh
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        link.setAttribute("href", url)
+        link.setAttribute("download", `data-tabel-${new Date().toISOString().slice(0, 10)}.csv`)
+        link.style.visibility = "hidden"
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        
+        toast({
+          title: "Berhasil mengunduh data",
+          description: "Data tabel telah berhasil diunduh dalam format CSV",
+        })
+      } else if (type === "pdf" || type === "image") {
+        // Untuk PDF dan gambar, gunakan html2canvas dan jsPDF
+        import('html2canvas').then(html2canvasModule => {
+          const html2canvas = html2canvasModule.default;
+          const tableElement = document.querySelector('.table-section table');
+          
+          if (!tableElement) {
+            toast({
+              title: "Gagal mengunduh data",
+              description: "Elemen tabel tidak ditemukan",
+              variant: "destructive",
+            });
+            return;
+          }
+          
+          html2canvas(tableElement as HTMLElement).then(canvas => {
+            if (type === "image") {
+              // Untuk gambar PNG
+              const imgData = canvas.toDataURL('image/png');
+              const link = document.createElement('a');
+              link.href = imgData;
+              link.download = `data-tabel-${new Date().toISOString().slice(0, 10)}.png`;
+              link.click();
+              
+              toast({
+                title: "Berhasil mengunduh data",
+                description: "Data tabel telah berhasil diunduh dalam format PNG",
+              });
+            } else {
+              // Untuk PDF
+              import('jspdf').then(jsPDFModule => {
+                const jsPDF = jsPDFModule.default;
+                const pdf = new jsPDF('l', 'mm', 'a4');
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = 280;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                
+                pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+                pdf.save(`data-tabel-${new Date().toISOString().slice(0, 10)}.pdf`);
+                
+                toast({
+                  title: "Berhasil mengunduh data",
+                  description: "Data tabel telah berhasil diunduh dalam format PDF",
+                });
+              }).catch(error => {
+                console.error("Error loading jsPDF:", error);
+                toast({
+                  title: "Gagal mengunduh PDF",
+                  description: "Terjadi kesalahan saat memuat library PDF",
+                  variant: "destructive",
+                });
+              });
+            }
+          }).catch(error => {
+            console.error("Error generating canvas:", error);
+            toast({
+              title: "Gagal mengunduh data",
+              description: "Terjadi kesalahan saat membuat gambar tabel",
+              variant: "destructive",
+            });
+          });
+        }).catch(error => {
+          console.error("Error loading html2canvas:", error);
+          toast({
+            title: "Gagal mengunduh data",
+            description: "Terjadi kesalahan saat memuat library untuk mengunduh",
+            variant: "destructive",
+          });
+        });
+      }
+    } catch (error) {
+      console.error("Error downloading data:", error);
+      toast({
+        title: "Gagal mengunduh data",
+        description: "Terjadi kesalahan saat mengunduh data",
+        variant: "destructive",
+      });
+    }
   }
 
   // Fungsi untuk mendapatkan label kolom
@@ -2909,13 +3180,13 @@ export function QueryBuilderDataTable() {
             </div>
 
             <div>
-              <Label className="text-sm font-medium mb-1">Sumber Data</Label>
+              <Label className="text-sm font-medium mb-1">Subjek</Label>
               <Select value={selectedDataSource} onValueChange={setSelectedDataSource}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Pilih sumber data" />
+                  <SelectValue placeholder="Pilih Subjek" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Semua Sumber Data</SelectItem>
+                  <SelectItem value="all">Semua Subjek</SelectItem>
                   {dataSources
                     .filter((source) => source !== "all")
                     .map((source) => (

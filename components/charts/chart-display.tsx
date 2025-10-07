@@ -321,7 +321,7 @@ export function ChartDisplay({
   groupName,
   groupValues,
   labelName,
-  showCumulativeData = false
+  showCumulativeData = false,
 }: ChartDisplayProps) {
   const [isVisible, setIsVisible] = useState(false)
   const [hasError, setHasError] = useState(false)

@@ -1259,10 +1259,145 @@ export function ChartBuilder() {
 
   // Handle download
   const handleDownload = (format: string) => {
-    toast({
-      title: "Unduh Dimulai",
-      description: `Mengunduh grafik sebagai ${format.toUpperCase()}`,
-    })
+    if (!chartData.data || chartData.data.length === 0) {
+      toast({
+        title: "Tidak Ada Data",
+        description: "Tidak ada data untuk diunduh. Silakan buat grafik terlebih dahulu.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      if (format === "excel") {
+        // Download as CSV
+        const headers = Object.keys(chartData.data[0]).join(',')
+        const rows = chartData.data.map((row: any) => 
+          Object.values(row).map(value => 
+            typeof value === 'string' ? `"${value.replace(/"/g, '""')}"` : value
+          ).join(',')
+        )
+        const csvContent = [headers, ...rows].join('\n')
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.setAttribute('href', url)
+        link.setAttribute('download', `chart-data-${new Date().toISOString().slice(0, 10)}.csv`)
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        
+        toast({
+          title: "Unduh Berhasil",
+          description: "Data berhasil diunduh dalam format CSV",
+        })
+      } else if (format === "pdf") {
+        // Download as PDF
+        import('html2canvas').then(html2canvasModule => {
+          const html2canvas = html2canvasModule.default
+          import('jspdf').then(jsPDFModule => {
+            const jsPDF = jsPDFModule.default
+            
+            const chartElement = document.getElementById('chart-container')
+            if (!chartElement) {
+              toast({
+                title: "Gagal Mengunduh",
+                description: "Elemen grafik tidak ditemukan",
+                variant: "destructive",
+              })
+              return
+            }
+            
+            toast({
+              title: "Memproses PDF",
+              description: "Sedang membuat file PDF, harap tunggu...",
+            })
+            
+            html2canvas(chartElement).then(canvas => {
+              const imgData = canvas.toDataURL('image/png')
+              const pdf = new jsPDF('l', 'mm', 'a4')
+              const pdfWidth = pdf.internal.pageSize.getWidth()
+              const pdfHeight = pdf.internal.pageSize.getHeight()
+              const imgWidth = canvas.width
+              const imgHeight = canvas.height
+              const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight)
+              const imgX = (pdfWidth - imgWidth * ratio) / 2
+              const imgY = 30
+              
+              pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio)
+              pdf.save(`chart-${new Date().toISOString().slice(0, 10)}.pdf`)
+              
+              toast({
+                title: "Unduh Berhasil",
+                description: "Grafik berhasil diunduh dalam format PDF",
+              })
+            })
+          }).catch(error => {
+            console.error("Error loading jsPDF:", error)
+            toast({
+              title: "Gagal Mengunduh",
+              description: "Gagal memuat library jsPDF",
+              variant: "destructive",
+            })
+          })
+        }).catch(error => {
+          console.error("Error loading html2canvas:", error)
+          toast({
+            title: "Gagal Mengunduh",
+            description: "Gagal memuat library html2canvas",
+            variant: "destructive",
+          })
+        })
+      } else if (format === "image") {
+        // Download as PNG
+        import('html2canvas').then(html2canvasModule => {
+          const html2canvas = html2canvasModule.default
+          
+          const chartElement = document.getElementById('chart-container')
+          if (!chartElement) {
+            toast({
+              title: "Gagal Mengunduh",
+              description: "Elemen grafik tidak ditemukan",
+              variant: "destructive",
+            })
+            return
+          }
+          
+          toast({
+            title: "Memproses Gambar",
+            description: "Sedang membuat file gambar, harap tunggu...",
+          })
+          
+          html2canvas(chartElement).then(canvas => {
+            const link = document.createElement('a')
+            link.download = `chart-${new Date().toISOString().slice(0, 10)}.png`
+            link.href = canvas.toDataURL('image/png')
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            
+            toast({
+              title: "Unduh Berhasil",
+              description: "Grafik berhasil diunduh dalam format PNG",
+            })
+          })
+        }).catch(error => {
+          console.error("Error loading html2canvas:", error)
+          toast({
+            title: "Gagal Mengunduh",
+            description: "Gagal memuat library html2canvas",
+            variant: "destructive",
+          })
+        })
+      }
+    } catch (error) {
+      console.error("Download error:", error)
+      toast({
+        title: "Gagal Mengunduh",
+        description: "Terjadi kesalahan saat mengunduh data",
+        variant: "destructive",
+      })
+    }
   }
 
   // Get variable names for display
@@ -1807,22 +1942,24 @@ export function ChartBuilder() {
               </CardHeader>
               <CardContent className="p-0 h-[600px]">
                 {showChart ? (
-                      <ChartDisplay
-                        data={chartData.data}
-                        chartType={selectedChartType}
-                        xAxisField={chartData.xAxisName}
-                        yAxisFields={chartData.yAxisNames}
-                    xAxisLabel={getVariableName(selectedXAxisVariables[0])}
-                    yAxisLabel={
-                      selectedYAxisVariables.length === 1
-                        ? getVariableName(selectedYAxisVariables[0])
-                        : "Nilai"
-                    }
-                        groupName={chartData.groupName}
-                        groupValues={chartData.groupValues}
-                    showCumulativeData={showCumulativeData}
-                  />
-                ) : (
+                      <div id="chart-container" className="w-full h-full">
+                        <ChartDisplay
+                          data={chartData.data}
+                          chartType={selectedChartType}
+                          xAxisField={chartData.xAxisName}
+                          yAxisFields={chartData.yAxisNames}
+                          xAxisLabel={getVariableName(selectedXAxisVariables[0])}
+                          yAxisLabel={
+                            selectedYAxisVariables.length === 1
+                              ? getVariableName(selectedYAxisVariables[0])
+                              : "Nilai"
+                          }
+                          groupName={chartData.groupName}
+                           groupValues={chartData.groupValues}
+                           showCumulativeData={showCumulativeData}
+                         />
+                       </div>
+                  ) : (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
                       <LineChart className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
