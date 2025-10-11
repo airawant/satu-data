@@ -452,7 +452,7 @@ export function ChartDisplay({
         // Handle regular data
         return [
           typeof value === 'number' ? value.toLocaleString() : '0',
-          name === "count" ? "Jumlah Data" : name
+          name === "Jumlah" ? "Jumlah Data" : name
         ]
       } catch (error) {
         return ['0', 'Tidak diketahui']
@@ -549,7 +549,7 @@ export function ChartDisplay({
                 dataKey={xAxisField}
                   angle={-35}
                 textAnchor="end"
-                height={80}
+                height={100}
                   label={{
                     value: xAxisLabel,
                     position: "insideBottom",

@@ -1272,8 +1272,8 @@ export function ChartBuilder() {
       if (format === "excel") {
         // Download as CSV
         const headers = Object.keys(chartData.data[0]).join(',')
-        const rows = chartData.data.map((row: any) => 
-          Object.values(row).map(value => 
+        const rows = chartData.data.map((row: any) =>
+          Object.values(row).map(value =>
             typeof value === 'string' ? `"${value.replace(/"/g, '""')}"` : value
           ).join(',')
         )
@@ -1286,7 +1286,7 @@ export function ChartBuilder() {
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
-        
+
         toast({
           title: "Unduh Berhasil",
           description: "Data berhasil diunduh dalam format CSV",
@@ -1297,7 +1297,7 @@ export function ChartBuilder() {
           const html2canvas = html2canvasModule.default
           import('jspdf').then(jsPDFModule => {
             const jsPDF = jsPDFModule.default
-            
+
             const chartElement = document.getElementById('chart-container')
             if (!chartElement) {
               toast({
@@ -1307,12 +1307,12 @@ export function ChartBuilder() {
               })
               return
             }
-            
+
             toast({
               title: "Memproses PDF",
               description: "Sedang membuat file PDF, harap tunggu...",
             })
-            
+
             html2canvas(chartElement).then(canvas => {
               const imgData = canvas.toDataURL('image/png')
               const pdf = new jsPDF('l', 'mm', 'a4')
@@ -1323,10 +1323,10 @@ export function ChartBuilder() {
               const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight)
               const imgX = (pdfWidth - imgWidth * ratio) / 2
               const imgY = 30
-              
+
               pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio)
               pdf.save(`chart-${new Date().toISOString().slice(0, 10)}.pdf`)
-              
+
               toast({
                 title: "Unduh Berhasil",
                 description: "Grafik berhasil diunduh dalam format PDF",
@@ -1352,7 +1352,7 @@ export function ChartBuilder() {
         // Download as PNG
         import('html2canvas').then(html2canvasModule => {
           const html2canvas = html2canvasModule.default
-          
+
           const chartElement = document.getElementById('chart-container')
           if (!chartElement) {
             toast({
@@ -1362,12 +1362,12 @@ export function ChartBuilder() {
             })
             return
           }
-          
+
           toast({
             title: "Memproses Gambar",
             description: "Sedang membuat file gambar, harap tunggu...",
           })
-          
+
           html2canvas(chartElement).then(canvas => {
             const link = document.createElement('a')
             link.download = `chart-${new Date().toISOString().slice(0, 10)}.png`
@@ -1375,7 +1375,7 @@ export function ChartBuilder() {
             document.body.appendChild(link)
             link.click()
             document.body.removeChild(link)
-            
+
             toast({
               title: "Unduh Berhasil",
               description: "Grafik berhasil diunduh dalam format PNG",
