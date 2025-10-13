@@ -29,7 +29,7 @@ File logo yang digunakan:
 
 - Autentikasi dan kontrol akses
 - Visualisasi data dengan berbagai jenis grafik
-- Pembuat kueri data interaktif
+- Tabel Dinamis data interaktif
 - Dashboard analitik
 - Pengelolaan dataset
 - Eksplorasi data

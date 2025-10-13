@@ -52,7 +52,7 @@ export default function Home() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <Link href="/query-builder">
                       <Button className="w-full">
-                        Pembuat Kueri
+                        Tabel Dinamis
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </Link>
@@ -92,9 +92,9 @@ export default function Home() {
                   <div className="p-2 bg-primary/10 rounded-full">
                     <TableProperties className="h-6 w-6 text-primary" />
                   </div>
-                  <h3 className="text-xl font-bold">Pembuat Kueri</h3>
+                  <h3 className="text-xl font-bold">Tabel Dinamis</h3>
                   <p className="text-sm text-center text-muted-foreground">
-                    Buat tabel dinamis dengan pembuat kueri drag-and-drop yang intuitif
+                    Buat tabel dinamis dengan tabel dinamis yang intuitif
                   </p>
                 </div>
               </Link>
@@ -180,7 +180,7 @@ export default function Home() {
                 </Link>
                 <Link href="/query-builder">
                   <Button size="lg" variant="outline">
-                    Coba Pembuat Kueri
+                    Coba Tabel Dinamis
                   </Button>
                 </Link>
               </div>

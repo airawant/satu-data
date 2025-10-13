@@ -549,7 +549,7 @@ export function ChartDisplay({
                 dataKey={xAxisField}
                   angle={-35}
                 textAnchor="end"
-                height={100}
+                height={80}
                   label={{
                     value: xAxisLabel,
                     position: "insideBottom",
