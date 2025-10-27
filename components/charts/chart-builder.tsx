@@ -1260,7 +1260,7 @@ export function ChartBuilder() {
   // Handle download
   const handleDownload = (format: string) => {
     if (!chartData.data || chartData.data.length === 0) {
-      toast({
+    toast({
         title: "Tidak Ada Data",
         description: "Tidak ada data untuk diunduh. Silakan buat grafik terlebih dahulu.",
         variant: "destructive",
@@ -1943,22 +1943,22 @@ export function ChartBuilder() {
               <CardContent className="p-0 h-[600px]">
                 {showChart ? (
                       <div id="chart-container" className="w-full h-full">
-                        <ChartDisplay
-                          data={chartData.data}
-                          chartType={selectedChartType}
-                          xAxisField={chartData.xAxisName}
-                          yAxisFields={chartData.yAxisNames}
+                      <ChartDisplay
+                        data={chartData.data}
+                        chartType={selectedChartType}
+                        xAxisField={chartData.xAxisName}
+                        yAxisFields={chartData.yAxisNames}
                           xAxisLabel={getVariableName(selectedXAxisVariables[0])}
                           yAxisLabel={
                             selectedYAxisVariables.length === 1
                               ? getVariableName(selectedYAxisVariables[0])
                               : "Nilai"
                           }
-                          groupName={chartData.groupName}
-                           groupValues={chartData.groupValues}
+                        groupName={chartData.groupName}
+                        groupValues={chartData.groupValues}
                            showCumulativeData={showCumulativeData}
                          />
-                       </div>
+                      </div>
                   ) : (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">

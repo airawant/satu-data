@@ -445,8 +445,8 @@ export function QueryBuilderDataTable() {
     const yearDerivativeVariable = selectedDataset.variables.find(
       (v) =>
         v.name.toLowerCase().includes("triwulan") ||
-        v.name.toLowerCase().includes("semester") ||
-        v.name.toLowerCase().includes("bulan")
+             v.name.toLowerCase().includes("semester") ||
+             v.name.toLowerCase().includes("bulan")
     );
 
     // Get unique values for tahun
@@ -455,9 +455,9 @@ export function QueryBuilderDataTable() {
       dataArray.forEach((row) => {
         if (
           row[yearVariable.name] !== undefined &&
-          row[yearVariable.name] !== null &&
-          row[yearVariable.name] !== "" &&
-          String(row[yearVariable.name]) !== "null" &&
+            row[yearVariable.name] !== null &&
+            row[yearVariable.name] !== "" &&
+            String(row[yearVariable.name]) !== "null" &&
           String(row[yearVariable.name]) !== "undefined"
         ) {
           uniqueYears.add(row[yearVariable.name].toString());
@@ -486,7 +486,7 @@ export function QueryBuilderDataTable() {
 
     // Set selected row titles based on the configuration
     const rowVariable = selectedDataset.variables.find((v) => v.name === rowField);
-    if (rowVariable) {
+        if (rowVariable) {
       setSelectedRowTitles([rowVariable.name]);
 
       // Get unique values for this row title
@@ -498,17 +498,17 @@ export function QueryBuilderDataTable() {
           row[rowVariable.name] !== ""
         ) {
           uniqueRowValues.add(row[rowVariable.name].toString());
-        }
+            }
       });
 
       const rowValues = Array.from(uniqueRowValues)
         .sort()
         .map((value, index) => ({
-          id: `${rowVariable.id}_value_${index}`,
-          name: value,
-          variableId: rowVariable.id,
+              id: `${rowVariable.id}_value_${index}`,
+              name: value,
+              variableId: rowVariable.id,
           variableName: rowVariable.name,
-        }));
+      }));
 
       setAvailableRowTitles(rowValues);
     }
@@ -539,30 +539,30 @@ export function QueryBuilderDataTable() {
         });
       } else {
         // Untuk metode lain (seperti "count"), tampilkan semua nilai karakteristik
-        characteristicVariables.forEach((variable) => {
-          const uniqueValues = new Set<string>();
-          dataArray.forEach((row) => {
+      characteristicVariables.forEach((variable) => {
+        const uniqueValues = new Set<string>();
+        dataArray.forEach((row) => {
             if (
               row[variable.name] !== undefined &&
               row[variable.name] !== null &&
               row[variable.name] !== ""
             ) {
-              uniqueValues.add(row[variable.name].toString());
-            }
-          });
+            uniqueValues.add(row[variable.name].toString());
+                }
+        });
 
           const values = Array.from(uniqueValues)
             .sort()
             .map((value, index) => ({
-              id: `${variable.id}_value_${index}`,
-              name: value,
-              variableId: variable.id,
-              variableName: variable.name,
+                  id: `${variable.id}_value_${index}`,
+                  name: value,
+                  variableId: variable.id,
+                  variableName: variable.name,
               type: variable.type === "measure" ? "measure" : "count",
-            }));
+        }));
 
-          characteristicValues.push(...values);
-        });
+        characteristicValues.push(...values);
+      });
       }
 
       setAvailableCharacteristics(characteristicValues);
@@ -715,12 +715,12 @@ export function QueryBuilderDataTable() {
     const validYears =
       dimensionValues["tahun"]?.filter(
         (year) =>
-          year !== null &&
-          year !== undefined &&
-          year !== "" &&
-          year !== "null" &&
-          year !== "undefined"
-      ) || [];
+      year !== null &&
+      year !== undefined &&
+      year !== "" &&
+      year !== "null" &&
+      year !== "undefined"
+    ) || [];
     setAvailableYears(validYears);
 
     // Convert string[] to { id: string, name: string }[] for availableYearDerivatives with proper month sorting
@@ -1403,13 +1403,13 @@ export function QueryBuilderDataTable() {
     // Filter data berdasarkan tahun yang dipilih
     const filteredByYear = dataArray.filter(
       (row) =>
-        row &&
-        row[yearVariable.name] !== undefined &&
-        row[yearVariable.name] !== null &&
-        row[yearVariable.name] !== "" &&
-        selectedYears.includes(String(row[yearVariable.name])) &&
-        String(row[yearVariable.name]) !== "null" &&
-        String(row[yearVariable.name]) !== "undefined"
+      row &&
+      row[yearVariable.name] !== undefined &&
+      row[yearVariable.name] !== null &&
+      row[yearVariable.name] !== "" &&
+      selectedYears.includes(String(row[yearVariable.name])) &&
+      String(row[yearVariable.name]) !== "null" &&
+      String(row[yearVariable.name]) !== "undefined"
     );
 
     if (filteredByYear.length === 0) {
@@ -1424,19 +1424,19 @@ export function QueryBuilderDataTable() {
     // Periksa apakah setidaknya satu karakteristik memiliki nilai - hanya jika ada karakteristik yang dipilih
     if (selectedCharacteristics.length > 0) {
       const hasCharacteristicValues = selectedCharacteristics.some((charId) => {
-        // Cari karakteristik berdasarkan ID
+      // Cari karakteristik berdasarkan ID
         const characteristic = availableCharacteristics.find((c) => c.id === charId);
-        return !!characteristic; // Pastikan karakteristik ditemukan
-      });
+      return !!characteristic; // Pastikan karakteristik ditemukan
+    });
 
-      if (!hasCharacteristicValues) {
-        toast({
-          title: "Perhatian",
+    if (!hasCharacteristicValues) {
+      toast({
+        title: "Perhatian",
           description:
             "Tidak ada nilai karakteristik yang tersedia untuk pilihan yang dipilih. Silakan pilih karakteristik lain.",
-          variant: "destructive",
-        });
-        return false;
+        variant: "destructive",
+      });
+      return false;
       }
     }
 
@@ -1482,9 +1482,9 @@ export function QueryBuilderDataTable() {
 
       // Verifikasi karakteristik - hanya jika ada karakteristik yang dipilih
       if (selectedCharacteristicNames.size > 0) {
-        for (const charName of selectedCharacteristicNames) {
-          // Gunakan type casting untuk mengatasi TypeScript error
-          const rowObj = row as Record<string, any>;
+      for (const charName of selectedCharacteristicNames) {
+        // Gunakan type casting untuk mengatasi TypeScript error
+        const rowObj = row as Record<string, any>;
           if (
             rowObj[charName] === undefined ||
             rowObj[charName] === null ||
@@ -1492,8 +1492,8 @@ export function QueryBuilderDataTable() {
             String(rowObj[charName]) === "null" ||
             String(rowObj[charName]) === "undefined"
           ) {
-            rowMatches = false;
-            break;
+          rowMatches = false;
+          break;
           }
         }
       }
@@ -1624,8 +1624,8 @@ export function QueryBuilderDataTable() {
             // Jika ada konfigurasi tabel, gunakan API
             fetch(`/api/table-configs/${currentTableConfigId}`)
               .then((response) => {
-                if (!response.ok) {
-                  throw new Error(`Error fetching table config: ${response.statusText}`);
+          if (!response.ok) {
+            throw new Error(`Error fetching table config: ${response.statusText}`);
                 }
                 return response.json();
               })
@@ -1682,8 +1682,8 @@ export function QueryBuilderDataTable() {
       (availableCharacteristics.length > 0 && selectedCharacteristics.length === 0) ||
       selectedRowTitles.length === 0
     ) {
-      return;
-    }
+        return;
+      }
 
     try {
       // Ambil konfigurasi tabel kembali jika perlu
@@ -1693,7 +1693,7 @@ export function QueryBuilderDataTable() {
 
       // Hapus pemanggilan setSelectedData karena ini mengakibatkan "Data Terpilih" muncul
       // tanpa perlu klik tombol "Tambah"
-    } catch (error) {
+      } catch (error) {
       console.error("Error regenerating table data:", error);
     }
   };
@@ -1726,31 +1726,31 @@ export function QueryBuilderDataTable() {
     const yearDerivativeVariable = selectedDataset?.variables.find(
       (v) =>
         v.name.toLowerCase().includes("triwulan") ||
-        v.name.toLowerCase().includes("semester") ||
-        v.name.toLowerCase().includes("bulan")
+             v.name.toLowerCase().includes("semester") ||
+             v.name.toLowerCase().includes("bulan")
     );
 
     // Filter data based on selected years - pastikan setiap row valid sebelum memfilter
     let filteredData = dataArray.filter(
       (row) =>
-        row && // pastikan row tidak null/undefined
-        row[yearVariable.name] !== undefined &&
-        row[yearVariable.name] !== null &&
-        row[yearVariable.name] !== "" &&
-        selectedYears.includes(String(row[yearVariable.name])) &&
-        String(row[yearVariable.name]) !== "null" &&
-        String(row[yearVariable.name]) !== "undefined"
+      row && // pastikan row tidak null/undefined
+      row[yearVariable.name] !== undefined &&
+      row[yearVariable.name] !== null &&
+      row[yearVariable.name] !== "" &&
+      selectedYears.includes(String(row[yearVariable.name])) &&
+      String(row[yearVariable.name]) !== "null" &&
+      String(row[yearVariable.name]) !== "undefined"
     );
 
     // Filter berdasarkan turunan tahun jika dipilih
     if (yearDerivativeVariable && selectedYearDerivatives.length > 0) {
       filteredData = filteredData.filter(
         (row) =>
-          row &&
-          row[yearDerivativeVariable.name] !== undefined &&
-          row[yearDerivativeVariable.name] !== null &&
-          row[yearDerivativeVariable.name] !== "" &&
-          selectedYearDerivatives.includes(String(row[yearDerivativeVariable.name]))
+        row &&
+        row[yearDerivativeVariable.name] !== undefined &&
+        row[yearDerivativeVariable.name] !== null &&
+        row[yearDerivativeVariable.name] !== "" &&
+        selectedYearDerivatives.includes(String(row[yearDerivativeVariable.name]))
       );
     }
 
@@ -1825,30 +1825,30 @@ export function QueryBuilderDataTable() {
     Array.from(uniqueRowValues)
       .sort()
       .forEach((value, index) => {
-        const rowTitleId = `${rowVariable.id}_value_${index}`;
+      const rowTitleId = `${rowVariable.id}_value_${index}`;
 
-        // Periksa apakah nilai judul baris ini dipilih pengguna
-        // Jika tidak ada nilai judul baris yang dipilih secara spesifik, tampilkan semua nilai untuk variabel yang dipilih
-        const specificValueSelected = selectedRowTitleMap.has(rowTitleId);
+      // Periksa apakah nilai judul baris ini dipilih pengguna
+      // Jika tidak ada nilai judul baris yang dipilih secara spesifik, tampilkan semua nilai untuk variabel yang dipilih
+      const specificValueSelected = selectedRowTitleMap.has(rowTitleId);
         const isVariableSelected =
           selectedRowVariableNames.includes(rowVariable.name) ||
-          selectedRowTitles.includes(rowVariable.id) ||
-          selectedRowTitles.includes(rowVariable.name);
+                               selectedRowTitles.includes(rowVariable.id) ||
+                               selectedRowTitles.includes(rowVariable.name);
         const showAllValues =
           isVariableSelected &&
           selectedRowTitles.filter(
             (id) => id.includes("_value_") && id.startsWith(`${rowVariable.id}_value_`)
           ).length === 0;
 
-        if (specificValueSelected || showAllValues) {
-          rowTitlesByVariable[rowVariable.name].push({
-            id: rowTitleId,
-            name: value,
-            variableId: rowVariable.id,
-            variableName: rowVariable.name,
-          });
-        }
+      if (specificValueSelected || showAllValues) {
+      rowTitlesByVariable[rowVariable.name].push({
+          id: rowTitleId,
+        name: value,
+        variableId: rowVariable.id,
+        variableName: rowVariable.name,
       });
+      }
+    });
 
     // Periksa apakah ada judul baris yang ditemukan
     if (
@@ -1889,178 +1889,178 @@ export function QueryBuilderDataTable() {
       const characteristicVariables =
         selectedDataset?.variables.filter((v) => characteristicFields.includes(v.name)) || [];
 
-      // Membuat pemetaan antara ID karakteristik yang dipilih dan nilai aktualnya
-      const selectedCharacteristicMap = new Map<string, boolean>();
+    // Membuat pemetaan antara ID karakteristik yang dipilih dan nilai aktualnya
+    const selectedCharacteristicMap = new Map<string, boolean>();
       selectedCharacteristics.forEach((selectedId) => {
-        selectedCharacteristicMap.set(selectedId, true);
-      });
+      selectedCharacteristicMap.set(selectedId, true);
+    });
 
-      // Membuat array dengan nama variabel yang sudah dipilih
-      const selectedVariableNames = selectedCharacteristics
+    // Membuat array dengan nama variabel yang sudah dipilih
+    const selectedVariableNames = selectedCharacteristics
         .filter((id) => !id.includes("_value_")) // Ambil hanya variabel, bukan nilai spesifik
         .map((id) => {
           const variable = characteristicVariables.find((v) => v.id === id || v.name === id);
-          return variable?.name;
-        })
-        .filter(Boolean) as string[];
+        return variable?.name;
+      })
+      .filter(Boolean) as string[];
 
-      // Jika tidak ada variabel karakteristik yang dipilih secara eksplisit, gunakan semua variabel yang tersedia
-      if (selectedVariableNames.length === 0 && characteristicVariables.length > 0) {
-        // Periksa apakah ada id yang mungkin cocok dengan format nilai karakteristik
+    // Jika tidak ada variabel karakteristik yang dipilih secara eksplisit, gunakan semua variabel yang tersedia
+    if (selectedVariableNames.length === 0 && characteristicVariables.length > 0) {
+      // Periksa apakah ada id yang mungkin cocok dengan format nilai karakteristik
         const valueSelections = selectedCharacteristics.filter((id) => id.includes("_value_"));
 
-        if (valueSelections.length > 0) {
-          // Ambil variabel dari karakteristik nilai yang dipilih
-          const valueVariables = new Set<string>();
+      if (valueSelections.length > 0) {
+        // Ambil variabel dari karakteristik nilai yang dipilih
+        const valueVariables = new Set<string>();
 
-          for (const valueId of valueSelections) {
-            // Coba cocokkan dengan karakteristik dalam availableCharacteristics
+        for (const valueId of valueSelections) {
+          // Coba cocokkan dengan karakteristik dalam availableCharacteristics
             const characteristic = availableCharacteristics.find((c) => c.id === valueId);
-            if (characteristic?.variableName) {
-              valueVariables.add(characteristic.variableName);
-            }
+          if (characteristic?.variableName) {
+            valueVariables.add(characteristic.variableName);
           }
+        }
 
-          // Tambahkan variabel tersebut ke selectedVariableNames
-          characteristicVariables
+        // Tambahkan variabel tersebut ke selectedVariableNames
+        characteristicVariables
             .filter((v) => valueVariables.has(v.name))
             .forEach((v) => {
-              if (!selectedVariableNames.includes(v.name)) {
-                selectedVariableNames.push(v.name);
-              }
-            });
-        }
-
-        // Jika masih kosong, gunakan semua variabel karakteristik
-        if (selectedVariableNames.length === 0) {
-          characteristicVariables.forEach((v) => {
-            selectedVariableNames.push(v.name);
+            if (!selectedVariableNames.includes(v.name)) {
+              selectedVariableNames.push(v.name);
+            }
           });
-        }
       }
 
-      characteristicVariables.forEach((variable) => {
-        // Periksa apakah variabel ini dipilih pengguna
+      // Jika masih kosong, gunakan semua variabel karakteristik
+      if (selectedVariableNames.length === 0) {
+          characteristicVariables.forEach((v) => {
+          selectedVariableNames.push(v.name);
+        });
+      }
+    }
+
+    characteristicVariables.forEach((variable) => {
+      // Periksa apakah variabel ini dipilih pengguna
         const isVariableSelected =
           selectedVariableNames.includes(variable.name) ||
-          selectedCharacteristics.includes(variable.id) ||
-          selectedCharacteristics.includes(variable.name);
+                               selectedCharacteristics.includes(variable.id) ||
+                               selectedCharacteristics.includes(variable.name);
 
-        if (!isVariableSelected) {
-          return; // Skip variabel yang tidak dipilih
-        }
+      if (!isVariableSelected) {
+        return; // Skip variabel yang tidak dipilih
+      }
 
-        characteristicsByVariable[variable.name] = [];
+      characteristicsByVariable[variable.name] = [];
 
-        // Get unique characteristic values
-        const uniqueValues = new Set<string>();
-        filteredData.forEach((row) => {
+      // Get unique characteristic values
+      const uniqueValues = new Set<string>();
+      filteredData.forEach((row) => {
           if (
             row &&
             row[variable.name] !== undefined &&
             row[variable.name] !== null &&
             row[variable.name] !== ""
           ) {
-            uniqueValues.add(String(row[variable.name]));
-          }
-        });
-
-        // Jika tidak ada nilai unik, tampilkan pesan warning tapi tetap lanjutkan
-        if (uniqueValues.size === 0) {
-          console.warn(`No unique values found for characteristic variable: ${variable.name}`);
-          // Tambahkan placeholder untuk menghindari array kosong
-          characteristicsByVariable[variable.name].push({
-            id: `${variable.id}_placeholder`,
-            name: "Tidak ada nilai",
-            variableId: variable.id,
-            variableName: variable.name,
-            type: variable.type === "measure" ? "measure" : "count",
-          });
-          return;
+          uniqueValues.add(String(row[variable.name]));
         }
+      });
 
-        // Format characteristic values
+      // Jika tidak ada nilai unik, tampilkan pesan warning tapi tetap lanjutkan
+      if (uniqueValues.size === 0) {
+        console.warn(`No unique values found for characteristic variable: ${variable.name}`);
+        // Tambahkan placeholder untuk menghindari array kosong
+        characteristicsByVariable[variable.name].push({
+          id: `${variable.id}_placeholder`,
+          name: "Tidak ada nilai",
+          variableId: variable.id,
+          variableName: variable.name,
+          type: variable.type === "measure" ? "measure" : "count",
+        });
+        return;
+      }
+
+      // Format characteristic values
         Array.from(uniqueValues)
           .sort()
           .forEach((value, index) => {
-            const characteristicId = `${variable.id}_value_${index}`;
+        const characteristicId = `${variable.id}_value_${index}`;
 
-            // Periksa apakah nilai karakteristik ini dipilih pengguna
-            // Jika tidak ada nilai karakteristik yang dipilih secara spesifik, tampilkan semua nilai untuk variabel yang dipilih
-            const specificValueSelected = selectedCharacteristicMap.has(characteristicId);
+        // Periksa apakah nilai karakteristik ini dipilih pengguna
+        // Jika tidak ada nilai karakteristik yang dipilih secara spesifik, tampilkan semua nilai untuk variabel yang dipilih
+        const specificValueSelected = selectedCharacteristicMap.has(characteristicId);
             const showAllValues =
               isVariableSelected &&
               selectedCharacteristics.filter(
                 (id) => id.includes("_value_") && id.startsWith(`${variable.id}_value_`)
               ).length === 0;
 
-            if (specificValueSelected || showAllValues) {
-              characteristicsByVariable[variable.name].push({
-                id: characteristicId,
-                name: value,
-                variableId: variable.id,
-                variableName: variable.name,
-                type: variable.type === "measure" ? "measure" : "count",
-              });
-            }
+        if (specificValueSelected || showAllValues) {
+          characteristicsByVariable[variable.name].push({
+            id: characteristicId,
+            name: value,
+            variableId: variable.id,
+            variableName: variable.name,
+            type: variable.type === "measure" ? "measure" : "count",
           });
+        }
+      });
 
-        // Jika setelah filter tidak ada nilai yang sesuai, tambahkan semua nilai
-        if (characteristicsByVariable[variable.name].length === 0) {
+      // Jika setelah filter tidak ada nilai yang sesuai, tambahkan semua nilai
+      if (characteristicsByVariable[variable.name].length === 0) {
           console.warn(
             `No matching values found for characteristic variable: ${variable.name}, adding all values`
           );
           Array.from(uniqueValues)
             .sort()
             .forEach((value, index) => {
-              characteristicsByVariable[variable.name].push({
-                id: `${variable.id}_value_${index}`,
-                name: value,
-                variableId: variable.id,
-                variableName: variable.name,
-                type: variable.type === "measure" ? "measure" : "count",
-              });
-            });
-        }
-      });
+          characteristicsByVariable[variable.name].push({
+            id: `${variable.id}_value_${index}`,
+            name: value,
+            variableId: variable.id,
+            variableName: variable.name,
+            type: variable.type === "measure" ? "measure" : "count",
+          });
+        });
+      }
+    });
 
-      // Periksa apakah ada karakteristik yang ditemukan
-      if (Object.keys(characteristicsByVariable).length === 0) {
-        console.warn("No characteristic values found in filtered data");
+    // Periksa apakah ada karakteristik yang ditemukan
+    if (Object.keys(characteristicsByVariable).length === 0) {
+      console.warn("No characteristic values found in filtered data");
 
-        // Jika tidak ada karakteristik yang ditemukan, tetapi ada variabel karakteristik, coba gunakan semua
-        if (characteristicVariables.length > 0) {
-          characteristicVariables.forEach((variable) => {
-            characteristicsByVariable[variable.name] = [];
+      // Jika tidak ada karakteristik yang ditemukan, tetapi ada variabel karakteristik, coba gunakan semua
+      if (characteristicVariables.length > 0) {
+        characteristicVariables.forEach((variable) => {
+          characteristicsByVariable[variable.name] = [];
 
-            // Get unique characteristic values
-            const uniqueValues = new Set<string>();
-            filteredData.forEach((row) => {
+          // Get unique characteristic values
+          const uniqueValues = new Set<string>();
+          filteredData.forEach((row) => {
               if (
                 row &&
                 row[variable.name] !== undefined &&
                 row[variable.name] !== null &&
                 row[variable.name] !== ""
               ) {
-                uniqueValues.add(String(row[variable.name]));
-              }
-            });
+              uniqueValues.add(String(row[variable.name]));
+            }
+          });
 
-            // Format characteristic values
+          // Format characteristic values
             Array.from(uniqueValues)
               .sort()
               .forEach((value, index) => {
-                characteristicsByVariable[variable.name].push({
-                  id: `${variable.id}_value_${index}`,
-                  name: value,
-                  variableId: variable.id,
-                  variableName: variable.name,
-                  type: variable.type === "measure" ? "measure" : "count",
-                });
-              });
+            characteristicsByVariable[variable.name].push({
+              id: `${variable.id}_value_${index}`,
+              name: value,
+              variableId: variable.id,
+              variableName: variable.name,
+              type: variable.type === "measure" ? "measure" : "count",
+            });
           });
+        });
 
-          console.log("After fallback to all characteristics:", characteristicsByVariable);
+        console.log("After fallback to all characteristics:", characteristicsByVariable);
 
           // Jika masih kosong, kembalikan error
           if (Object.keys(characteristicsByVariable).length === 0) {
@@ -2075,8 +2075,8 @@ export function QueryBuilderDataTable() {
                 type: "count",
               },
             ];
-          }
-        } else {
+        }
+      } else {
           // Buat karakteristik dummy jika tidak ada karakteristik yang tersedia
           characteristicsByVariable["_dummy_characteristic"] = [
             {
@@ -2117,12 +2117,12 @@ export function QueryBuilderDataTable() {
       if (!year || year === "null" || year === "undefined") return;
 
       yearDerivativeValues.forEach((derivative) => {
-        Object.keys(characteristicsByVariable).forEach((variableName) => {
-          const characteristicValues = characteristicsByVariable[variableName];
+      Object.keys(characteristicsByVariable).forEach((variableName) => {
+        const characteristicValues = characteristicsByVariable[variableName];
 
-          if (!characteristicValues || characteristicValues.length === 0) {
-            return; // Skip if no characteristic values
-          }
+        if (!characteristicValues || characteristicValues.length === 0) {
+          return; // Skip if no characteristic values
+        }
 
           // Jika aggregation_method adalah "sum" atau "average", hanya tampilkan "Jumlah"
           if (aggregationMethod === "sum" || aggregationMethod === "average") {
@@ -2142,22 +2142,22 @@ export function QueryBuilderDataTable() {
             });
           } else {
             // Untuk metode lain (seperti "count"), tampilkan semua nilai karakteristik
-            characteristicValues.forEach((characteristic) => {
+        characteristicValues.forEach((characteristic) => {
               const columnId = derivative
                 ? `${year}_${derivative}_${variableName}_${characteristic.name}`
                 : `${year}_${variableName}_${characteristic.name}`;
 
-              characteristicValueColumns.push({
-                id: columnId,
-                name: characteristic.name,
-                year,
-                yearDerivative: derivative || undefined,
-                characteristicName: variableName,
-                characteristicValue: characteristic.name,
-                type: characteristic.type || "count",
-                aggregationMethod,
-              });
+          characteristicValueColumns.push({
+              id: columnId,
+            name: characteristic.name,
+            year,
+              yearDerivative: derivative || undefined,
+            characteristicName: variableName,
+            characteristicValue: characteristic.name,
+            type: characteristic.type || "count",
+            aggregationMethod,
             });
+          });
           }
         });
       });
@@ -2299,7 +2299,7 @@ export function QueryBuilderDataTable() {
           // Check if row matches the current combination
           if (
             !Object.keys(combination).every((variable) => {
-              const rowVal = row[variable];
+            const rowVal = row[variable];
               return (
                 rowVal !== undefined &&
                 rowVal !== null &&
@@ -2320,7 +2320,7 @@ export function QueryBuilderDataTable() {
             return true; // Ambil semua data untuk jumlah/rata-rata
           } else {
             // Untuk metode lain, filter berdasarkan nilai karakteristik
-            const characteristicVal = row[characteristicName];
+          const characteristicVal = row[characteristicName];
             return (
               characteristicVal !== undefined &&
               characteristicVal !== null &&
@@ -2417,9 +2417,9 @@ export function QueryBuilderDataTable() {
 
     // Tambahkan kolom total ke pivotColumns jika belum ada
     if (!pivotColumns.some((col) => col.type === "total")) {
-      pivotColumns.push({
-        id: "row_total",
-        name: "Total",
+    pivotColumns.push({
+      id: "row_total",
+      name: "Total",
         type: "total",
       });
     }
@@ -2440,31 +2440,31 @@ export function QueryBuilderDataTable() {
     const yearDerivativeVariable = selectedDataset?.variables.find(
       (v) =>
         v.name.toLowerCase().includes("triwulan") ||
-        v.name.toLowerCase().includes("semester") ||
-        v.name.toLowerCase().includes("bulan")
+             v.name.toLowerCase().includes("semester") ||
+             v.name.toLowerCase().includes("bulan")
     );
 
     // Filter data based on selected years - pastikan setiap row valid sebelum memfilter
     let filteredData = dataArray.filter(
       (row) =>
-        row && // pastikan row tidak null/undefined
-        row[yearVariable.name] !== undefined &&
-        row[yearVariable.name] !== null &&
-        row[yearVariable.name] !== "" &&
-        selectedYears.includes(String(row[yearVariable.name])) &&
-        String(row[yearVariable.name]) !== "null" &&
-        String(row[yearVariable.name]) !== "undefined"
+      row && // pastikan row tidak null/undefined
+      row[yearVariable.name] !== undefined &&
+      row[yearVariable.name] !== null &&
+      row[yearVariable.name] !== "" &&
+      selectedYears.includes(String(row[yearVariable.name])) &&
+      String(row[yearVariable.name]) !== "null" &&
+      String(row[yearVariable.name]) !== "undefined"
     );
 
     // Filter berdasarkan turunan tahun jika dipilih
     if (yearDerivativeVariable && selectedYearDerivatives.length > 0) {
       filteredData = filteredData.filter(
         (row) =>
-          row &&
-          row[yearDerivativeVariable.name] !== undefined &&
-          row[yearDerivativeVariable.name] !== null &&
-          row[yearDerivativeVariable.name] !== "" &&
-          selectedYearDerivatives.includes(String(row[yearDerivativeVariable.name]))
+        row &&
+        row[yearDerivativeVariable.name] !== undefined &&
+        row[yearDerivativeVariable.name] !== null &&
+        row[yearDerivativeVariable.name] !== "" &&
+        selectedYearDerivatives.includes(String(row[yearDerivativeVariable.name]))
       );
     }
 
@@ -2557,7 +2557,7 @@ export function QueryBuilderDataTable() {
           description: "Tidak ada judul baris yang tersedia.",
           variant: "destructive",
         });
-        return { data: [], columns: [] };
+      return { data: [], columns: [] };
       }
     }
 
@@ -2709,17 +2709,17 @@ export function QueryBuilderDataTable() {
           });
         } else {
           // Untuk metode lain (seperti "count"), tampilkan semua nilai karakteristik
-          characteristicValues.forEach((characteristic) => {
-            characteristicValueColumns.push({
-              id: `${year}_${variableName}_${characteristic.name}`,
-              name: characteristic.name,
-              year,
-              characteristicName: variableName,
-              characteristicValue: characteristic.name,
-              type: characteristic.type || "count",
-              aggregationMethod,
-            });
+        characteristicValues.forEach((characteristic) => {
+          characteristicValueColumns.push({
+            id: `${year}_${variableName}_${characteristic.name}`,
+            name: characteristic.name,
+            year,
+            characteristicName: variableName,
+            characteristicValue: characteristic.name,
+            type: characteristic.type || "count",
+            aggregationMethod,
           });
+        });
         }
       });
     });
@@ -2866,7 +2866,7 @@ export function QueryBuilderDataTable() {
           // Check if row matches the current combination
           if (
             !Object.keys(combination).every((variable) => {
-              const rowVal = row[variable];
+            const rowVal = row[variable];
               return (
                 rowVal !== undefined &&
                 rowVal !== null &&
@@ -2887,7 +2887,7 @@ export function QueryBuilderDataTable() {
             return true; // Ambil semua data untuk jumlah/rata-rata
           } else {
             // Untuk metode lain, filter berdasarkan nilai karakteristik
-            const characteristicVal = row[characteristicName];
+          const characteristicVal = row[characteristicName];
             return (
               characteristicVal !== undefined &&
               characteristicVal !== null &&
@@ -2962,7 +2962,7 @@ export function QueryBuilderDataTable() {
 
       // Hitung total untuk setiap kolom karakteristik
       characteristicValueColumns.forEach((column) => {
-        const columnTotal = pivotData.reduce((sum, row) => {
+      const columnTotal = pivotData.reduce((sum, row) => {
           const value = row[column.id];
           return sum + (typeof value === "number" ? value : 0);
         }, 0);
@@ -3137,12 +3137,12 @@ export function QueryBuilderDataTable() {
           setPivotColumns(columns);
           setShowTable(true);
 
-          // Scroll ke bagian tabel
-          setTimeout(() => {
+      // Scroll ke bagian tabel
+      setTimeout(() => {
             const tableElement = document.querySelector(".table-section");
-            if (tableElement) {
+        if (tableElement) {
               tableElement.scrollIntoView({ behavior: "smooth" });
-            }
+        }
           }, 100);
         } else {
           throw new Error("Hasil tidak valid dari generatePivotTableData");
@@ -3184,7 +3184,7 @@ export function QueryBuilderDataTable() {
       !pivotColumns ||
       pivotColumns.length === 0
     ) {
-      toast({
+    toast({
         title: "Tidak ada data untuk diunduh",
         description: "Silakan pilih data dan tampilkan tabel terlebih dahulu",
         variant: "destructive",
@@ -3346,9 +3346,9 @@ export function QueryBuilderDataTable() {
     const yearHeaders: Record<
       string,
       {
-        year: string;
-        derivativeColumns: Record<string, PivotColumn[]>;
-        totalColumns: number;
+      year: string;
+      derivativeColumns: Record<string, PivotColumn[]>;
+      totalColumns: number;
       }
     > = {};
 
@@ -3405,10 +3405,10 @@ export function QueryBuilderDataTable() {
   const getCharacteristicColumns = (year: string, derivative: string) => {
     return pivotColumns.filter(
       (col) =>
-        col.type !== "rowTitle" &&
-        col.type !== "total" &&
-        col.year === year &&
-        (derivative === "none" ? !col.yearDerivative : col.yearDerivative === derivative)
+      col.type !== "rowTitle" &&
+      col.type !== "total" &&
+      col.year === year &&
+      (derivative === "none" ? !col.yearDerivative : col.yearDerivative === derivative)
     );
   };
 
@@ -3421,11 +3421,11 @@ export function QueryBuilderDataTable() {
       .forEach((column) => {
         if (column.year && column.characteristicName) {
           const key = `${column.year}_${column.characteristicName}`;
-          if (!characteristicHeaders[key]) {
+        if (!characteristicHeaders[key]) {
             characteristicHeaders[key] = { name: column.characteristicName, columns: [] };
-          }
-          characteristicHeaders[key].columns.push(column);
         }
+          characteristicHeaders[key].columns.push(column);
+      }
       });
 
     return Object.values(characteristicHeaders);
@@ -3551,23 +3551,23 @@ export function QueryBuilderDataTable() {
                     ) : (
                       <div className="h-full">
                         {displayedConfigurations.map((config) => (
-                          <div
-                            key={config.id}
-                            className={`p-3 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
-                              selectedConfigId === config.id ? "bg-primary/10" : ""
-                            }`}
-                            onClick={() => handleConfigSelect(config)}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="font-medium text-sm">{config.title}</div>
+                        <div
+                          key={config.id}
+                          className={`p-3 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
+                            selectedConfigId === config.id ? "bg-primary/10" : ""
+                          }`}
+                          onClick={() => handleConfigSelect(config)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="font-medium text-sm">{config.title}</div>
                               {selectedConfigId === config.id && (
                                 <Check className="h-4 w-4 text-primary" />
                               )}
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {config.description || "Tidak ada deskripsi"}
-                            </div>
                           </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {config.description || "Tidak ada deskripsi"}
+                          </div>
+                        </div>
                         ))}
                       </div>
                     )}
@@ -3747,172 +3747,172 @@ export function QueryBuilderDataTable() {
           </div>
           {/* Karakteristik dan Judul Baris dalam satu baris */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Karakteristik selection */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-sm font-medium">Karakteristik</Label>
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="text-primary h-auto p-0"
-                  onClick={handleSelectAllCharacteristics}
-                  disabled={!selectedDataset || availableCharacteristics.length === 0}
-                >
-                  {selectedCharacteristics.length === availableCharacteristics.length
-                    ? "Batal Pilih"
-                    : "Pilih Semua"}
-                </Button>
-              </div>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center mb-2">
-                      <Info className="h-4 w-4 text-muted-foreground mr-1" />
+                {/* Karakteristik selection */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-sm font-medium">Karakteristik</Label>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="text-primary h-auto p-0"
+                      onClick={handleSelectAllCharacteristics}
+                      disabled={!selectedDataset || availableCharacteristics.length === 0}
+                    >
+                      {selectedCharacteristics.length === availableCharacteristics.length
+                        ? "Batal Pilih"
+                        : "Pilih Semua"}
+                    </Button>
+                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center mb-2">
+                          <Info className="h-4 w-4 text-muted-foreground mr-1" />
                       <p className="text-xs text-muted-foreground">
                         Pilih minimal satu karakteristik
                       </p>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Karakteristik diambil dari konfigurasi tabel yang telah disimpan</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Karakteristik diambil dari konfigurasi tabel yang telah disimpan</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
 
-              <Card className="h-[150px]">
-                <CardContent className="p-2 h-full overflow-y-auto">
-                  {!selectedDataset ? (
-                    <div className="flex items-center justify-center h-full text-center p-4">
-                      <p className="text-muted-foreground">Pilih tabel terlebih dahulu</p>
-                    </div>
-                  ) : availableCharacteristics.length === 0 ? (
-                    <div className="flex items-center justify-center h-full text-center p-4">
+                  <Card className="h-[150px]">
+                    <CardContent className="p-2 h-full overflow-y-auto">
+                      {!selectedDataset ? (
+                        <div className="flex items-center justify-center h-full text-center p-4">
+                          <p className="text-muted-foreground">Pilih tabel terlebih dahulu</p>
+                        </div>
+                      ) : availableCharacteristics.length === 0 ? (
+                        <div className="flex items-center justify-center h-full text-center p-4">
                       <p className="text-muted-foreground">
                         Tidak ada karakteristik yang tersedia
                       </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {availableCharacteristics.map((characteristic) => (
-                        <div key={characteristic.id} className="mb-2">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`characteristic-${characteristic.id}`}
-                              checked={selectedCharacteristics.includes(characteristic.id)}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {availableCharacteristics.map((characteristic) => (
+                            <div key={characteristic.id} className="mb-2">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`characteristic-${characteristic.id}`}
+                                  checked={selectedCharacteristics.includes(characteristic.id)}
                               onCheckedChange={() =>
                                 handleCharacteristicSelect(characteristic.id)
                               }
-                            />
-                            <Label
-                              htmlFor={`characteristic-${characteristic.id}`}
-                              className="text-sm cursor-pointer"
-                            >
-                              {characteristic.name}
-                              <Badge
-                                className="ml-2"
+                                />
+                                <Label
+                                  htmlFor={`characteristic-${characteristic.id}`}
+                                  className="text-sm cursor-pointer"
+                                >
+                                  {characteristic.name}
+                                  <Badge
+                                    className="ml-2"
                                 variant={
                                   characteristic.type === "count" ? "outline" : "secondary"
                                 }
-                              >
-                                {characteristic.type === "count" ? "Count" : "Measure"}
-                              </Badge>
-                            </Label>
-                          </div>
-                          {characteristic.values && characteristic.values.length > 0 && (
-                            <div className="ml-6 mt-1 text-xs text-muted-foreground">
-                              <span>Nilai: </span>
-                              {characteristic.values.length > 5
+                                  >
+                                    {characteristic.type === "count" ? "Count" : "Measure"}
+                                  </Badge>
+                                </Label>
+                              </div>
+                              {characteristic.values && characteristic.values.length > 0 && (
+                                <div className="ml-6 mt-1 text-xs text-muted-foreground">
+                                  <span>Nilai: </span>
+                                  {characteristic.values.length > 5
                                 ? `${characteristic.values.slice(0, 5).join(", ")}... (${
                                     characteristic.values.length
                                   } nilai)`
-                                : characteristic.values.join(", ")}
+                                    : characteristic.values.join(", ")}
+                                </div>
+                              )}
                             </div>
-                          )}
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
 
-            {/* Judul Baris selection */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-sm font-medium">Judul Baris</Label>
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="text-primary h-auto p-0"
-                  onClick={handleSelectAllRowTitles}
-                  disabled={!selectedDataset || availableRowTitles.length === 0}
-                >
+                {/* Judul Baris selection */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-sm font-medium">Judul Baris</Label>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="text-primary h-auto p-0"
+                      onClick={handleSelectAllRowTitles}
+                      disabled={!selectedDataset || availableRowTitles.length === 0}
+                    >
                   {selectedRowTitles.length === availableRowTitles.length
                     ? "Batal Pilih"
                     : "Pilih Semua"}
-                </Button>
-              </div>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center mb-2">
-                      <Info className="h-4 w-4 text-muted-foreground mr-1" />
+                    </Button>
+                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center mb-2">
+                          <Info className="h-4 w-4 text-muted-foreground mr-1" />
                       <p className="text-xs text-muted-foreground">
                         Pilih minimal satu judul baris
                       </p>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Judul baris diambil dari konfigurasi tabel yang telah disimpan</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Judul baris diambil dari konfigurasi tabel yang telah disimpan</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
 
               <Card className="h-[150px]">
-                <CardContent className="p-2 h-full overflow-y-auto">
-                  {!selectedDataset ? (
-                    <div className="flex items-center justify-center h-full text-center p-4">
-                      <p className="text-muted-foreground">Pilih tabel terlebih dahulu</p>
-                    </div>
-                  ) : availableRowTitles.length === 0 ? (
-                    <div className="flex items-center justify-center h-full text-center p-4">
+                    <CardContent className="p-2 h-full overflow-y-auto">
+                      {!selectedDataset ? (
+                        <div className="flex items-center justify-center h-full text-center p-4">
+                          <p className="text-muted-foreground">Pilih tabel terlebih dahulu</p>
+                        </div>
+                      ) : availableRowTitles.length === 0 ? (
+                        <div className="flex items-center justify-center h-full text-center p-4">
                       <p className="text-muted-foreground">
                         Tidak ada judul baris yang tersedia
                       </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {availableRowTitles.map((rowTitle) => (
-                        <div key={rowTitle.id} className="mb-2">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`rowTitle-${rowTitle.id}`}
-                              checked={selectedRowTitles.includes(rowTitle.id)}
-                              onCheckedChange={() => handleRowTitleSelect(rowTitle.id)}
-                            />
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {availableRowTitles.map((rowTitle) => (
+                            <div key={rowTitle.id} className="mb-2">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`rowTitle-${rowTitle.id}`}
+                                  checked={selectedRowTitles.includes(rowTitle.id)}
+                                  onCheckedChange={() => handleRowTitleSelect(rowTitle.id)}
+                                />
                             <Label
                               htmlFor={`rowTitle-${rowTitle.id}`}
                               className="text-sm cursor-pointer"
                             >
-                              {rowTitle.name}
-                            </Label>
-                          </div>
-                          {rowTitle.values && rowTitle.values.length > 0 && (
-                            <div className="ml-6 mt-1 text-xs text-muted-foreground">
-                              <span>Nilai: </span>
-                              {rowTitle.values.length > 5
+                                  {rowTitle.name}
+                                </Label>
+                              </div>
+                              {rowTitle.values && rowTitle.values.length > 0 && (
+                                <div className="ml-6 mt-1 text-xs text-muted-foreground">
+                                  <span>Nilai: </span>
+                                  {rowTitle.values.length > 5
                                 ? `${rowTitle.values.slice(0, 5).join(", ")}... (${
                                     rowTitle.values.length
                                   } nilai)`
-                                : rowTitle.values.join(", ")}
+                                    : rowTitle.values.join(", ")}
+                                </div>
+                              )}
                             </div>
-                          )}
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                      )}
+                    </CardContent>
+                  </Card>
             </div>
           </div>
           <div className="flex justify-center gap-3 mt-6">
@@ -4106,13 +4106,13 @@ export function QueryBuilderDataTable() {
                     {Object.entries(getYearHeaders()).map(([year, yearHeader]) => {
                       return Object.entries(yearHeader.derivativeColumns).map(
                         ([derivative, columns]) => (
-                          <th
-                            key={`header-derivative-${year}-${derivative}`}
-                            colSpan={columns.length}
-                            className="border p-2 bg-blue-800 text-white font-medium text-sm text-center"
-                          >
-                            {derivative === "none" ? "Semua" : derivative}
-                          </th>
+                        <th
+                          key={`header-derivative-${year}-${derivative}`}
+                          colSpan={columns.length}
+                          className="border p-2 bg-blue-800 text-white font-medium text-sm text-center"
+                        >
+                          {derivative === "none" ? "Semua" : derivative}
+                        </th>
                         )
                       );
                     })}
@@ -4124,13 +4124,13 @@ export function QueryBuilderDataTable() {
                       return Object.entries(yearHeader.derivativeColumns).flatMap(
                         ([derivative, columns]) => {
                           return columns.map((column) => (
-                            <th
-                              key={`subheader-${column.id}`}
-                              className="border p-2 bg-blue-700 text-white font-medium text-xs text-center"
-                            >
-                              {column.characteristicValue}
-                            </th>
-                          ));
+                          <th
+                            key={`subheader-${column.id}`}
+                            className="border p-2 bg-blue-700 text-white font-medium text-xs text-center"
+                        >
+                          {column.characteristicValue}
+                        </th>
+                        ));
                         }
                       );
                     })}
@@ -4215,10 +4215,10 @@ export function QueryBuilderDataTable() {
                 {selectedDataset?.tableConfig?.aggregationMethod === "sum"
                   ? "Jumlah"
                   : selectedDataset?.tableConfig?.aggregationMethod === "average"
-                  ? "Rata-rata"
-                  : selectedDataset?.tableConfig?.aggregationMethod === "count"
-                  ? "Jumlah Data"
-                  : "Jumlah"}
+                    ? "Rata-rata"
+                    : selectedDataset?.tableConfig?.aggregationMethod === "count"
+                      ? "Jumlah Data"
+                      : "Jumlah"}
               </p>
             </div>
           </div>
